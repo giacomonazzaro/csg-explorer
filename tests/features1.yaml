@@ -1,0 +1,20 @@
+cameras:
+  - name: default
+    lens: 0.05
+    aperture: 0.0
+    aspect: 2.4
+    lookat: [3, 3, 3, 0.5,0.5,0.5 , 0, 1, 0]
+  
+materials:
+  - name: floor
+    diffuse: [0.7, 0.7, 0.7]
+ 
+shapes:
+  - name: floor
+    filename: shapes/test-floor.ply
+    preset: test-floor
+ 
+instances:
+  - name: floor
+    shape: floor
+    material: floor
