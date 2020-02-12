@@ -296,20 +296,19 @@ void run_app(int argc, const char* argv[]) {
 
   auto& csg = app->csg;
   int   n;
-  n = add_operation(csg, -1,
-      CsgOperation{true, 0, primitive_type::sphere, {0, 0, -0.1, 0.4}});
+  add_edit(csg, -1, {true, 0.0}, {primitive_type::sphere, {0, 0, -0.1, 0.4}});
 
-  auto testa = add_operation(csg, csg.root,
-      CsgOperation{true, 0.1, primitive_type::sphere, {0, 0, 0.3, 0.1}});
+  add_edit(
+      csg, csg.root, {true, 0.1}, {primitive_type::sphere, {0, 0, 0.3, 0.1}});
 
-  testa = add_operation(csg, csg.root,
-      CsgOperation{false, 0.0, primitive_type::sphere, {0.2, 0.2, 0.25, 0.1}});
+  add_edit(csg, csg.root, {false, 0.0},
+      {primitive_type::sphere, {0.2, 0.2, 0.25, 0.1}});
 
-  testa = add_operation(csg, csg.root,
-      CsgOperation{false, 0.0, primitive_type::sphere, {-0.2, 0.2, 0.25, 0.1}});
+  add_edit(csg, csg.root, {false, 0.0},
+      {primitive_type::sphere, {-0.2, 0.2, 0.25, 0.1}});
 
-  testa = add_operation(csg, csg.root,
-      CsgOperation{false, 0.1, primitive_type::sphere, {0.5, 0.0, 0.0, 0.4}});
+  add_edit(csg, csg.root, {false, 0.1},
+      {primitive_type::sphere, {0.5, 0.0, 0.0, 0.4}});
 
   print_elapsed(load_timer);
 

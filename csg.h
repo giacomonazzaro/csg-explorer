@@ -5,16 +5,25 @@ using namespace yocto;
 enum struct primitive_type { sphere, box, none };
 
 struct CsgOperation {
-  bool           add       = true;
-  float          softness  = 0;
-  primitive_type primitive = primitive_type::none;
-  vector<float>  params    = {};
+  bool  add      = true;
+  float softness = 0;
+};
+
+struct CsgPrimitve {
+  primitive_type type   = primitive_type::none;
+  vector<float>  params = {};
 };
 
 struct CsgNode {
-  int          parent   = -1;
-  vec2i        children = {-1, -1};
-  CsgOperation operation;
+  int   parent   = -1;
+  vec2i children = {-1, -1};
+
+//  union {
+    CsgOperation operation;
+    CsgPrimitve  primitive;
+//  };
+
+  CsgNode() {}
 };
 
 struct CsgTree {
@@ -50,12 +59,13 @@ inline float eval_primitive(const vec3f& position, primitive_type primitive,
 
 inline float eval_csg(
     const CsgTree& csg, const vec3f& position, const CsgNode& node) {
-  auto& op = node.operation;
   if (node.children == vec2i{-1, -1}) {
-    return eval_primitive(position, op.primitive, op.params);
+    auto& primitive = node.primitive;
+    return eval_primitive(position, primitive.type, primitive.params);
   } else {
-    auto f = eval_csg(csg, position, csg.nodes[node.children.x]);
-    auto g = eval_csg(csg, position, csg.nodes[node.children.y]);
+    auto  f  = eval_csg(csg, position, csg.nodes[node.children.x]);
+    auto  g  = eval_csg(csg, position, csg.nodes[node.children.y]);
+    auto& op = node.operation;
     if (op.add)
       return smin(f, g, op.softness);
     else
@@ -63,12 +73,13 @@ inline float eval_csg(
   }
 }
 
-inline int add_operation(CsgTree& csg, int parent, const CsgOperation& op) {
+inline int add_edit(
+    CsgTree& csg, int parent, const CsgOperation& op, const CsgPrimitve& prim) {
   int index = csg.nodes.size();
 
   if (csg.nodes.empty()) {
     auto& n     = csg.nodes.emplace_back();
-    n.operation = op;
+    n.primitive = prim;
     csg.root    = 0;
     return index;
   }
@@ -82,13 +93,12 @@ inline int add_operation(CsgTree& csg, int parent, const CsgOperation& op) {
     csg.root                 = index;
     csg.nodes[parent].parent = csg.root;
 
-    root.children           = {parent, index + 1};
-    root.operation.softness = op.softness;
-    root.operation.add      = op.add;
+    root.children  = {parent, index + 1};
+    root.operation = op;
 
-    n.parent              = csg.root;
-    n.operation.primitive = op.primitive;
-    n.operation.params    = op.params;
+    n.parent    = csg.root;
+    n.primitive = prim;
+
     return index + 1;
   }
 
@@ -96,19 +106,16 @@ inline int add_operation(CsgTree& csg, int parent, const CsgOperation& op) {
   assert(csg.nodes[parent].children.y == -1);
 
   // old
-  auto& a               = csg.nodes.emplace_back();
-  a.parent              = parent;
-  a.operation.primitive = csg.nodes[parent].operation.primitive;
-  a.operation.params    = csg.nodes[parent].operation.params;
+  auto& a     = csg.nodes.emplace_back();
+  a.parent    = parent;
+  a.operation = csg.nodes[parent].operation;
 
   // new
-  auto& b               = csg.nodes.emplace_back();
-  b.parent              = parent;
-  b.operation.primitive = op.primitive;
-  b.operation.params    = op.params;
+  auto& b     = csg.nodes.emplace_back();
+  b.parent    = parent;
+  b.primitive = prim;
 
-  csg.nodes[parent].children           = {index, index + 1};
-  csg.nodes[parent].operation.softness = op.softness;
-  csg.nodes[parent].operation.add      = op.add;
+  csg.nodes[parent].children  = {index, index + 1};
+  csg.nodes[parent].operation = op;
   return index + 1;
 }
