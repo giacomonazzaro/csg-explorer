@@ -299,17 +299,17 @@ void run_app(int argc, const char* argv[]) {
   n = add_operation(csg, -1,
       CsgOperation{true, 0, primitive_type::sphere, {0, 0, -0.1, 0.4}});
 
-  auto testa = add_operation(csg, n,
+  auto testa = add_operation(csg, csg.root,
       CsgOperation{true, 0.1, primitive_type::sphere, {0, 0, 0.3, 0.1}});
 
-  testa = add_operation(csg, testa - 1,
+  testa = add_operation(csg, csg.root,
       CsgOperation{false, 0.0, primitive_type::sphere, {0.2, 0.2, 0.25, 0.1}});
 
-  testa = add_operation(csg, testa - 1,
+  testa = add_operation(csg, csg.root,
       CsgOperation{false, 0.0, primitive_type::sphere, {-0.2, 0.2, 0.25, 0.1}});
 
   testa = add_operation(csg, csg.root,
-      CsgOperation{false, 0.0, primitive_type::sphere, {0.5, 0.0, 0.0, 0.4}});
+      CsgOperation{false, 0.1, primitive_type::sphere, {0.5, 0.0, 0.0, 0.4}});
 
   print_elapsed(load_timer);
 
