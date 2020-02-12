@@ -18,10 +18,10 @@ struct CsgNode {
   int   parent   = -1;
   vec2i children = {-1, -1};
 
-//  union {
-    CsgOperation operation;
-    CsgPrimitve  primitive;
-//  };
+  //  union {
+  CsgOperation operation;
+  CsgPrimitve  primitive;
+  //  };
 
   CsgNode() {}
 };
@@ -119,3 +119,16 @@ inline int add_edit(
   csg.nodes[parent].operation = op;
   return index + 1;
 }
+
+inline int add_sphere(CsgTree& csg, int parent, float softness,
+    const vec3f& center, float radius) {
+  return add_edit(csg, parent, {true, softness},
+      {primitive_type::sphere, {center.x, center.y, center.z, radius}});
+}
+
+inline int subtract_sphere(CsgTree& csg, int parent, float softness,
+    const vec3f& center, float radius) {
+  return add_edit(csg, parent, {false, softness},
+      {primitive_type::sphere, {center.x, center.y, center.z, radius}});
+}
+

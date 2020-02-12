@@ -295,20 +295,11 @@ void run_app(int argc, const char* argv[]) {
   load_scene(app->filename, ioscene);
 
   auto& csg = app->csg;
-  int   n;
-  add_edit(csg, -1, {true, 0.0}, {primitive_type::sphere, {0, 0, -0.1, 0.4}});
-
-  add_edit(
-      csg, csg.root, {true, 0.1}, {primitive_type::sphere, {0, 0, 0.3, 0.1}});
-
-  add_edit(csg, csg.root, {false, 0.0},
-      {primitive_type::sphere, {0.2, 0.2, 0.25, 0.1}});
-
-  add_edit(csg, csg.root, {false, 0.0},
-      {primitive_type::sphere, {-0.2, 0.2, 0.25, 0.1}});
-
-  add_edit(csg, csg.root, {false, 0.1},
-      {primitive_type::sphere, {0.5, 0.0, 0.0, 0.4}});
+  int   s   = add_sphere(csg, csg.root, 0.0, {0, 0, -0.1}, 0.4);
+  add_sphere(csg, s, 0.1, {0, 0, 0.3}, 0.1);
+  subtract_sphere(csg, s, 0.0, {0.2, 0.2, 0.25}, 0.1);
+  subtract_sphere(csg, s, 0.0, {-0.2, 0.2, 0.25}, 0.1);
+  subtract_sphere(csg, s, 0.1, {0.5, 0.0, 0.0}, 0.4);
 
   print_elapsed(load_timer);
 
