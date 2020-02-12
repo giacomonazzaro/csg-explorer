@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../csg.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -50,6 +51,7 @@ struct app_state {
 
   // scene
   trace_scene scene      = {};
+  CsgTree     csg        = {};
   bool        add_skyenv = false;
 
   // rendering state
@@ -171,13 +173,14 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Trace a block of samples
-vec4f raymarch_sample(trace_state& state, const trace_camera& camera,
-    const vec2i& ij, const trace_params& params) {
-  auto& pixel   = state.at(ij);
+vec4f raymarch_sample(const CsgTree& csg, trace_state& state,
+    const trace_camera& camera, const vec2i& ij, const trace_params& params) {
+  auto& pixel = state.at(ij);
 
-  auto  ray = sample_camera(camera, ij, state.size(), rand2f(pixel.rng), rand2f(pixel.rng));
-  auto radiance = raymarch(camera, {}, ray, pixel.rng, params);
-  
+  auto ray = sample_camera(
+      camera, ij, state.size(), rand2f(pixel.rng), rand2f(pixel.rng));
+  auto radiance = raymarch(camera, csg, ray, pixel.rng, params);
+
   if (!isfinite(radiance)) radiance = zero3f;
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
@@ -189,7 +192,8 @@ vec4f raymarch_sample(trace_state& state, const trace_camera& camera,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> raymarch_image(const trace_scene& scene, const trace_params& params) {
+image<vec4f> raymarch_image(
+    const trace_scene& scene, const CsgTree& csg, const trace_params& params) {
   auto state = trace_state{};
   init_state(state, scene, params);
   auto render = image{state.size(), zero4f};
@@ -198,17 +202,18 @@ image<vec4f> raymarch_image(const trace_scene& scene, const trace_params& params
     for (auto j = 0; j < render.size().y; j++) {
       for (auto i = 0; i < render.size().x; i++) {
         for (auto s = 0; s < params.samples; s++) {
-          render[{i, j}] = raymarch_sample(state, scene.cameras[0], {i, j}, params);
+          render[{i, j}] = raymarch_sample(
+              csg, state, scene.cameras[0], {i, j}, params);
         }
       }
     }
   } else {
-    parallel_for(
-        render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
-          for (auto s = 0; s < params.samples; s++) {
-            render[ij] = raymarch_sample(state, scene.cameras[0], ij, params);
-          }
-        });
+    parallel_for(render.size(), [&render, &state, &scene, &params, &csg](
+                                    const vec2i& ij) {
+      for (auto s = 0; s < params.samples; s++) {
+        render[ij] = raymarch_sample(csg, state, scene.cameras[0], ij, params);
+      }
+    });
   }
 
   return render;
@@ -228,7 +233,7 @@ void reset_display(shared_ptr<app_state> app) {
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = raymarch_image(app->scene, preview_prms);
+  auto preview         = raymarch_image(app->scene, app->csg, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -246,8 +251,10 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        // app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
-        app->render[ij] = raymarch_sample(app->state, app->scene.cameras[0], ij, app->params);
+        // app->render[ij] = trace_sample(app->state, app->scene, ij,
+        // app->params);
+        app->render[ij] = raymarch_sample(
+            app->csg, app->state, app->scene.cameras[0], ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -286,6 +293,24 @@ void run_app(int argc, const char* argv[]) {
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
   load_scene(app->filename, ioscene);
+
+  auto& csg = app->csg;
+  int   n;
+  n = add_operation(csg, -1,
+      CsgOperation{true, 0, primitive_type::sphere, {0, 0, -0.1, 0.4}});
+
+  auto testa = add_operation(csg, n,
+      CsgOperation{true, 0.1, primitive_type::sphere, {0, 0, 0.3, 0.1}});
+
+  testa = add_operation(csg, testa - 1,
+      CsgOperation{false, 0.0, primitive_type::sphere, {0.2, 0.2, 0.25, 0.1}});
+
+  testa = add_operation(csg, testa - 1,
+      CsgOperation{false, 0.0, primitive_type::sphere, {-0.2, 0.2, 0.25, 0.1}});
+
+  testa = add_operation(csg, csg.root,
+      CsgOperation{false, 0.0, primitive_type::sphere, {0.5, 0.0, 0.0, 0.4}});
+
   print_elapsed(load_timer);
 
   // conversion

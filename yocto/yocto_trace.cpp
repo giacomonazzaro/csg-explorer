@@ -2917,15 +2917,12 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
   return {radiance, hit};
 }
 
+#include "../csg.h"
 
 // Eyelight for quick previewing.
-vec3f raymarch(
-  const trace_camera& camera,
-  const volume<float>& volume,
-  ray3f ray, rng_state& rng,
-  const trace_params& params) {
-
-  auto box = bbox3f{{0,0,0}, {1,1,1}};
+vec3f raymarch(const trace_camera& camera, const CsgTree& csg, ray3f ray,
+    rng_state& rng, const trace_params& params) {
+  auto box            = bbox3f{{0, 0, 0}, {1, 1, 1}};
   auto intersect_bbox = [](const ray3f& ray, const bbox3f& bbox) -> float {
     // determine intersection ranges
     auto invd = 1.0f / ray.d;
@@ -2937,67 +2934,53 @@ vec3f raymarch(
     if (invd.z < 0.0f) swap(t0.z, t1.z);
     auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
     auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
-    if(tmax < tmin) return -1;
+    if (tmax < tmin) return -1;
     return tmin;
   };
 
-  auto sphere = [](const vec3f& p, const vec3f& center, float radius) -> float {
-    return length(p - center) - radius;
-  };
-  auto smin = []( float a, float b, float k ) -> float {
-    float h = max( k-abs(a-b), 0.0 )/k;
-    return min( a, b ) - h*h*k*(1.0/4.0);
-  };
-
-  auto sdf = [&](vec3f p) {
+  auto sdf = [&](vec3f p) -> float {
     p -= vec3f(0.5);
-    auto s1 = sphere(p, {0.0, 0.0, -0.1}, 0.4);
-    auto s2 = sphere(p, {0.0, 0.0, 0.3}, 0.1);
-    float d = smin(s1, s2, 0.1);
-    auto s3 = sphere(p, {0.2, 0.2, 0.25}, 0.1);
-    auto s4 = sphere(p, {-0.2, 0.2, 0.25}, 0.1);
-    d = max(d, -s3);
-    d = max(d, -s4);
-    return d;
+    return eval_csg(csg, p, csg.nodes[csg.root]);
   };
 
   auto compute_normal = [&sdf](const vec3f& p) {
     float eps = 0.01;
-    auto o = sdf(p);
-    auto x = sdf(p + vec3f{eps, 0, 0});
-    auto y = sdf(p + vec3f{0, eps, 0});
-    auto z = sdf(p + vec3f{0, 0, eps});
-    return normalize(vec3f{x,y,z} - vec3f(o));
+    auto  o   = sdf(p);
+    auto  x   = sdf(p + vec3f{eps, 0, 0});
+    auto  y   = sdf(p + vec3f{0, eps, 0});
+    auto  z   = sdf(p + vec3f{0, 0, eps});
+    return normalize(vec3f{x, y, z} - vec3f(o));
   };
 
   auto t = intersect_bbox(ray, box);
-  if (t < 0) { return vec3f(0.0); }
+  if (t < 0) {
+    return vec3f(0.0);
+  }
 
   ray.o += ray.d * (t + 0.01);
 
   for (int i = 0; i < 1000; i++) {
-      // float distance = eval_volume(volume, ray.o);
-      float distance = sdf(ray.o);
-      if (distance <= 0.01) {
-        auto normal = compute_normal(ray.o);
-        auto light = normalize(vec3f{0.2, 1, 0});
-        auto color = vec3f(0.8, 0.2, 0.1);
-        auto ambient = min((normal.y + 1) * 0.1f, 0.1f);
-        auto radiance = vec3f(0);
-        radiance += max(dot(normal, light), 0.0f);
-        radiance += ambient;
-        return color * radiance;
-      }
-      
-      if (abs(ray.o).x > 1) return vec3f(0.1);
-      if (abs(ray.o).y > 1) return vec3f(0.1);
-      if (abs(ray.o).z > 1) return vec3f(0.1);
-      ray.o += ray.d * distance;
+    // float distance = eval_volume(volume, ray.o);
+    float distance = sdf(ray.o);
+    if (distance <= 0.01) {
+      auto normal   = compute_normal(ray.o);
+      auto light    = normalize(vec3f{0.2, 1, 0});
+      auto color    = vec3f(0.8, 0.2, 0.1);
+      auto ambient  = min((normal.y + 1) * 0.1f, 0.1f);
+      auto radiance = vec3f(0);
+      radiance += max(dot(normal, light), 0.0f);
+      radiance += ambient;
+      return color * radiance;
+    }
+
+    if (abs(ray.o).x > 1) return vec3f(0.1);
+    if (abs(ray.o).y > 1) return vec3f(0.1);
+    if (abs(ray.o).z > 1) return vec3f(0.1);
+    ray.o += ray.d * distance;
   }
 
   return {1, 0, 0};
 }
-
 
 // Eyelight for quick previewing.
 static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
