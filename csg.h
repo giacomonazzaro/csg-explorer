@@ -31,7 +31,7 @@ inline float smin(float a, float b, float k) {
 inline float smax(float a, float b, float k) {
   if (k == 0) return yocto::max(a, b);
   float h = max(k - yocto::abs(a - b), 0.0) / k;
-  return max(a, b) - h * h * k * (1.0 / 4.0);
+  return max(a, b) + h * h * k * (1.0 / 4.0);
 };
 
 inline float eval_primitive(const vec3f& position, primitive_type primitive,
@@ -74,10 +74,10 @@ inline int add_operation(CsgTree& csg, int parent, const CsgOperation& op) {
   }
 
   if (parent == csg.root) {
-      csg.nodes.push_back({});
-      csg.nodes.push_back({});
-      auto& root = csg.nodes[index];
-      auto& n = csg.nodes[index + 1];
+    csg.nodes.push_back({});
+    csg.nodes.push_back({});
+    auto& root = csg.nodes[index];
+    auto& n    = csg.nodes[index + 1];
 
     csg.root                 = index;
     csg.nodes[parent].parent = csg.root;
