@@ -298,9 +298,15 @@ void run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  load_scene(app->filename, ioscene);
+  // load_scene(app->filename, ioscene);
+    auto camera = sceneio_camera{};
+    auto from = vec3f{2,2,2};
+    auto to = vec3f{0.5,0.5,0.5};
+    camera.frame = lookat_frame(from, to, {0,1,0});
+    camera.focus = length(from - to);
+    ioscene.cameras.push_back(camera);
 
-  app->csg = parse_csg("test.csg");
+  app->csg = parse_csg(app->filename);
 
   print_elapsed(load_timer);
 
@@ -367,7 +373,7 @@ void run_app(int argc, const char* argv[]) {
           reset_display(app);
           float time = get_seconds();
           if (time - app->timer > 2) {
-            app->csg   = parse_csg("test.csg");
+            app->csg   = parse_csg(app->filename);
             app->timer = time;
           }
         }

@@ -40,13 +40,16 @@ inline float smax(float a, float b, float k) {
   float h = max(k - yocto::abs(a - b), 0.0) / k;
   return max(a, b) + h * h * k * (1.0 / 4.0);
 };
+
 inline float eval_primitive(
     const vec3f& position, const CsgPrimitve& primitive) {
+  // Sphere
   if (primitive.type == primitive_type::sphere) {
     auto center = (const vec3f*)primitive.params;
     auto radius = primitive.params[3];
     return length(position - *center) - radius;
   }
+  // Box
   if (primitive.type == primitive_type::box) {
     return 1;
   }
@@ -56,8 +59,10 @@ inline float eval_primitive(
 
 inline float eval_operation(float f, float g, const CsgOperation& operation) {
   if (operation.blend >= 0) {
+    // Union
     return lerp(f, smin(f, g, operation.softness), operation.blend);
   } else {
+    // Subtracion
     return lerp(f, smax(f, -g, operation.softness), -operation.blend);
   }
 }
