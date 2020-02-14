@@ -28,11 +28,11 @@
 
 #include "../csg.h"
 #include "../parser.h"
+#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_common.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -40,9 +40,7 @@ using namespace yocto;
 #include <memory>
 using namespace std;
 
-float get_seconds() {
-  return get_time() * 1e-9;
-}
+float get_seconds() { return get_time() * 1e-9; }
 
 // Application state
 struct app_state {
@@ -56,10 +54,11 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  trace_scene scene      = {};
-  CsgTree     csg        = {};
-  float       timer      = 0;
-  bool        add_skyenv = false;
+  trace_scene scene = {};
+
+  Csg   csg        = {};
+  float timer      = 0;
+  bool  add_skyenv = false;
 
   // rendering state
   trace_state  state    = {};
@@ -180,7 +179,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Trace a block of samples
-vec4f raymarch_sample(const CsgTree& csg, trace_state& state,
+vec4f raymarch_sample(const Csg& csg, trace_state& state,
     const trace_camera& camera, const vec2i& ij, const trace_params& params) {
   auto& pixel = state.at(ij);
 
@@ -200,7 +199,7 @@ vec4f raymarch_sample(const CsgTree& csg, trace_state& state,
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> raymarch_image(
-    const trace_scene& scene, const CsgTree& csg, const trace_params& params) {
+    const trace_scene& scene, const Csg& csg, const trace_params& params) {
   auto state = trace_state{};
   init_state(state, scene, params);
   auto render = image{state.size(), zero4f};
@@ -349,9 +348,6 @@ void run_app(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
-
-
-
       });
   set_uiupdate_glcallback(
       win, [app](const opengl_window& win, const opengl_input& input) {
@@ -369,11 +365,11 @@ void run_app(int argc, const char* argv[]) {
           pan.x = -pan.x;
           update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
           reset_display(app);
-                  float time = get_seconds();
-        if(time - app->timer > 2) {
-          app->csg = parse_csg("test.csg");
-          app->timer = time;
-        }
+          float time = get_seconds();
+          if (time - app->timer > 2) {
+            app->csg   = parse_csg("test.csg");
+            app->timer = time;
+          }
         }
       });
 

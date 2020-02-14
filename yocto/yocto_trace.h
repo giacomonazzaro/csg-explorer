@@ -537,7 +537,7 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name);
 ray3f sample_camera(const trace_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 
-vec3f raymarch(const trace_camera& camera, const CsgTree& csg, ray3f ray,
+vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
     rng_state& rng, const trace_params& params);
 
 }  // namespace yocto

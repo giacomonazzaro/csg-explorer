@@ -49,22 +49,22 @@ static bool is_space(char c) {
 static void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
-static void trim_whitespace(string_view& str) {
-  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
-  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
-}
-static bool is_digit(char c) { return c >= '0' && c <= '9'; }
-static bool is_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-static bool is_whitespace(string_view str) {
-  while (!str.empty()) {
-    if (!is_space(str.front())) return false;
-    str.remove_prefix(1);
-  }
-  return true;
-}
+// static void trim_whitespace(string_view& str) {
+//  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+//  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
+//}
+// static bool is_digit(char c) { return c >= '0' && c <= '9'; }
+// static bool is_alpha(char c) {
+//  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+//}
+//
+// static bool is_whitespace(string_view str) {
+//  while (!str.empty()) {
+//    if (!is_space(str.front())) return false;
+//    str.remove_prefix(1);
+//  }
+//  return true;
+//}
 
 inline void parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
@@ -199,7 +199,7 @@ void parse_value(file_wrapper& fs, string_view& str, T& value) {
   }
 }
 
-CsgTree parse_csg(const string& filename) {
+Csg parse_csg(const string& filename) {
   auto csg = CsgTree{};
 
   auto fs = open_file(filename, "rb");
@@ -219,15 +219,7 @@ CsgTree parse_csg(const string& filename) {
     parse_value(str, parent);
     if (parent == -1) parent = csg.root;
 
-    string op = "?";  // + or -
-    parse_value(str, op);
-    if (op == "+")
-      operation.add = true;
-    else if (op == "-")
-      operation.add = false;
-    else
-      assert(0);
-
+    parse_value(str, operation.blend);
     parse_value(str, operation.softness);
 
     string primitive_name = "";
@@ -242,13 +234,16 @@ CsgTree parse_csg(const string& filename) {
     int num_params;
     if (primitive.type == primitive_type::sphere) num_params = 4;
     if (primitive.type == primitive_type::box) num_params = 4;
-    primitive.params = vector<float>(num_params);
     for (int i = 0; i < num_params; i++) {
-        parse_value(str, primitive.params[i]);
+      parse_value(str, primitive.params[i]);
     }
 
     add_edit(csg, parent, operation, primitive);
   }
 
+#if BAKE
+  return bake_eval_csg(csg);
+#else
   return csg;
+#endif
 }

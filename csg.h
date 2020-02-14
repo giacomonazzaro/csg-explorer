@@ -5,13 +5,21 @@ using namespace yocto;
 enum struct primitive_type { sphere, box, none };
 
 struct CsgOperation {
-  bool  add      = true;
-  float softness = 0;
+  float blend;
+  float softness;
 };
 
 struct CsgPrimitve {
-  primitive_type type   = primitive_type::none;
-  vector<float>  params = {};
+  float          params[16];
+  primitive_type type;
+};
+
+struct CsgXXX {
+  vec2i children;
+  union {
+    CsgOperation operation;
+    CsgPrimitve  primitive;
+  };
 };
 
 struct CsgNode {
@@ -31,6 +39,14 @@ struct CsgTree {
   int             root  = -1;
 };
 
+#define BAKE 0
+
+#if BAKE
+using Csg = vector<CsgXXX>;
+#else
+using Csg = CsgTree;
+#endif
+
 inline float smin(float a, float b, float k) {
   if (k == 0) return yocto::min(a, b);
   float h = max(k - yocto::abs(a - b), 0.0) / k;
@@ -43,8 +59,8 @@ inline float smax(float a, float b, float k) {
   return max(a, b) + h * h * k * (1.0 / 4.0);
 };
 
-inline float eval_primitive(const vec3f& position, primitive_type primitive,
-    const vector<float>& params) {
+inline float eval_primitive(
+    const vec3f& position, primitive_type primitive, const float* params) {
   if (primitive == primitive_type::sphere) {
     auto center = vec3f{params[0], params[1], params[2]};
     auto radius = params[3];
@@ -57,27 +73,78 @@ inline float eval_primitive(const vec3f& position, primitive_type primitive,
   return 1;
 }
 
+inline float eval_operation(float f, float g, float blend, float softness) {
+  if (blend >= 0) {
+    return lerp(f, smin(f, g, softness), blend);
+  } else {
+    return lerp(f, smax(f, -g, softness), -blend);
+  }
+}
+
 inline float eval_csg(
     const CsgTree& csg, const vec3f& position, const CsgNode& node) {
   if (node.children == vec2i{-1, -1}) {
-    auto& primitive = node.primitive;
-    return eval_primitive(position, primitive.type, primitive.params);
+    auto [params, type] = node.primitive;
+    return eval_primitive(position, type, params);
   } else {
-    auto  f     = eval_csg(csg, position, csg.nodes[node.children.x]);
-    auto  g     = eval_csg(csg, position, csg.nodes[node.children.y]);
-    auto& op    = node.operation;
-    float blend = op.softness;
-    if (blend >= 0) {
-      return blend * yocto::min(f, g) + (1 - blend) * f;
-    } else {
-      blend = fabs(blend);
-      return blend * yocto::max(f, -g) + (1 - blend) * f;
-    }
-    // if (op.add)
-    //   return smin(f, g, op.softness);
-    // else
-    //   return smax(f, -g, op.softness);
+    auto f = eval_csg(csg, position, csg.nodes[node.children.x]);
+    auto g = eval_csg(csg, position, csg.nodes[node.children.y]);
+    auto [blend, softness] = node.operation;
+    return eval_operation(f, g, blend, softness);
   }
+}
+
+inline float eval_csg(const CsgTree& csg, const vec3f& position) {
+  return eval_csg(csg, position, csg.nodes[csg.root]);
+}
+
+inline void bake_eval_csg(
+    const CsgTree& csg, int n, vector<CsgXXX>& result, vector<int>& mapping) {
+  auto& node = csg.nodes[n];
+  auto  f    = CsgXXX{};
+
+  if (node.children == vec2i{-1, -1}) {
+    auto& primitive = node.primitive;
+    for (int i = 0; i < 16; i++) f.primitive.params[i] = primitive.params[i];
+    f.primitive.type = primitive.type;
+    f.children       = {-1, -1};
+    mapping[n]       = result.size();
+    result.push_back(f);
+  } else {
+    bake_eval_csg(csg, node.children.x, result, mapping);
+    bake_eval_csg(csg, node.children.y, result, mapping);
+    assert(mapping[node.children.x] != -1);
+    assert(mapping[node.children.y] != -1);
+    f.children           = {mapping[node.children.x], mapping[node.children.y]};
+    f.operation.blend    = node.operation.blend;
+    f.operation.softness = node.operation.softness;
+    mapping[n]           = result.size();
+    result.push_back(f);
+  }
+}
+
+inline vector<CsgXXX> bake_eval_csg(const CsgTree& csg) {
+  auto result  = vector<CsgXXX>();
+  auto mapping = vector<int>(csg.nodes.size(), -1);
+  bake_eval_csg(csg, csg.root, result, mapping);
+  return result;
+}
+
+inline float eval_csg(const vector<CsgXXX>& csg, const vec3f& position) {
+  auto values = vector<float>(csg.size());
+  for (int i = 0; i < csg.size(); i++) {
+    auto& inst = csg[i];
+    if (inst.children == vec2i{-1, -1}) {
+      values[i] = eval_primitive(
+          position, inst.primitive.type, inst.primitive.params);
+    } else {
+      auto f    = values[inst.children.x];
+      auto g    = values[inst.children.y];
+      values[i] = eval_operation(
+          f, g, inst.operation.blend, inst.operation.softness);
+    }
+  }
+  return values.back();
 }
 
 inline int add_edit(
@@ -130,11 +197,13 @@ inline int add_edit(
 inline int add_sphere(CsgTree& csg, int parent, float softness,
     const vec3f& center, float radius) {
   return add_edit(csg, parent, {true, softness},
-      {primitive_type::sphere, {center.x, center.y, center.z, radius}});
+      {{center.x, center.y, center.z, radius}, primitive_type::sphere});
 }
 
 inline int subtract_sphere(CsgTree& csg, int parent, float softness,
     const vec3f& center, float radius) {
   return add_edit(csg, parent, {false, softness},
-      {primitive_type::sphere, {center.x, center.y, center.z, radius}});
+      {{center.x, center.y, center.z, radius}, primitive_type::sphere});
 }
+
+// typedef vector<CsgXXX> Csg;

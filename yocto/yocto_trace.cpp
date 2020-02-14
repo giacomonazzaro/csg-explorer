@@ -2920,7 +2920,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
 #include "../csg.h"
 
 // Eyelight for quick previewing.
-vec3f raymarch(const trace_camera& camera, const CsgTree& csg, ray3f ray,
+vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
     rng_state& rng, const trace_params& params) {
   auto box            = bbox3f{{0, 0, 0}, {1, 1, 1}};
   auto intersect_bbox = [](const ray3f& ray, const bbox3f& bbox) -> float {
@@ -2940,7 +2940,7 @@ vec3f raymarch(const trace_camera& camera, const CsgTree& csg, ray3f ray,
 
   auto sdf = [&](vec3f p) -> float {
     p -= vec3f(0.5);
-    return eval_csg(csg, p, csg.nodes[csg.root]);
+    return eval_csg(csg, p);
   };
 
   auto compute_normal = [&sdf](const vec3f& p) {
