@@ -63,13 +63,20 @@ inline float eval_csg(
     auto& primitive = node.primitive;
     return eval_primitive(position, primitive.type, primitive.params);
   } else {
-    auto  f  = eval_csg(csg, position, csg.nodes[node.children.x]);
-    auto  g  = eval_csg(csg, position, csg.nodes[node.children.y]);
-    auto& op = node.operation;
-    if (op.add)
-      return smin(f, g, op.softness);
-    else
-      return smax(f, -g, op.softness);
+    auto  f     = eval_csg(csg, position, csg.nodes[node.children.x]);
+    auto  g     = eval_csg(csg, position, csg.nodes[node.children.y]);
+    auto& op    = node.operation;
+    float blend = op.softness;
+    if (blend >= 0) {
+      return blend * yocto::min(f, g) + (1 - blend) * f;
+    } else {
+      blend = fabs(blend);
+      return blend * yocto::max(f, -g) + (1 - blend) * f;
+    }
+    // if (op.add)
+    //   return smin(f, g, op.softness);
+    // else
+    //   return smax(f, -g, op.softness);
   }
 }
 
@@ -131,4 +138,3 @@ inline int subtract_sphere(CsgTree& csg, int parent, float softness,
   return add_edit(csg, parent, {false, softness},
       {primitive_type::sphere, {center.x, center.y, center.z, radius}});
 }
-

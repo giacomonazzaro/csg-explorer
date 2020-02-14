@@ -1,7 +1,6 @@
-# format: +/-  blend  primitive  parameters
-
-+ 0.0 sphere 0.0 0.0 -0.1 0.4
-+ 0.1 sphere 0.0 0.0 0.3 0.1
-- 0.0 sphere 0.2 0.2 0.25 0.1
-- 0.0 sphere -0.2 0.2 0.25 0.1
-- 0.1 sphere 0.5 0.0 0.0 0.2
+# format: parent +/-  blend  primitive  parameters
+-1 + 1.0 sphere 0.0 0.0 -0.1 0.4
+-1 + -0.4 sphere 0.0 0.0 0.3 0.1
+-1 - -1.0 sphere 0.2 0.2 0.25 0.1
+-1 - -0.2 sphere -0.2 0.2 0.25 0.1
+-1 - -1.0 sphere 0.5 0.0 0.0 0.2

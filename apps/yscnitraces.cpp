@@ -32,12 +32,17 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_common.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
 #include <future>
 #include <memory>
 using namespace std;
+
+float get_seconds() {
+  return get_time() * 1e-9;
+}
 
 // Application state
 struct app_state {
@@ -53,6 +58,7 @@ struct app_state {
   // scene
   trace_scene scene      = {};
   CsgTree     csg        = {};
+  float       timer      = 0;
   bool        add_skyenv = false;
 
   // rendering state
@@ -295,8 +301,7 @@ void run_app(int argc, const char* argv[]) {
   auto load_timer = print_timed("loading scene");
   load_scene(app->filename, ioscene);
 
-  auto& csg = app->csg;
-  csg       = parse_csg("test.csg");
+  app->csg = parse_csg("test.csg");
 
   print_elapsed(load_timer);
 
@@ -344,6 +349,9 @@ void run_app(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
+
+
+
       });
   set_uiupdate_glcallback(
       win, [app](const opengl_window& win, const opengl_input& input) {
@@ -361,6 +369,11 @@ void run_app(int argc, const char* argv[]) {
           pan.x = -pan.x;
           update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
           reset_display(app);
+                  float time = get_seconds();
+        if(time - app->timer > 2) {
+          app->csg = parse_csg("test.csg");
+          app->timer = time;
+        }
         }
       });
 

@@ -2944,13 +2944,18 @@ vec3f raymarch(const trace_camera& camera, const CsgTree& csg, ray3f ray,
   };
 
   auto compute_normal = [&sdf](const vec3f& p) {
-    float eps = 0.01;
+    float eps = 0.001;
     auto  o   = sdf(p);
     auto  x   = sdf(p + vec3f{eps, 0, 0});
     auto  y   = sdf(p + vec3f{0, eps, 0});
     auto  z   = sdf(p + vec3f{0, 0, eps});
     return normalize(vec3f{x, y, z} - vec3f(o));
   };
+
+  auto material      = material_point{};
+  material.diffuse   = vec3f(0.9, 0.3, 0.2);
+  material.specular  = vec3f(0.04);
+  material.roughness = 0.2;
 
   auto t = intersect_bbox(ray, box);
   if (t < 0) {
@@ -2962,15 +2967,15 @@ vec3f raymarch(const trace_camera& camera, const CsgTree& csg, ray3f ray,
   for (int i = 0; i < 1000; i++) {
     // float distance = eval_volume(volume, ray.o);
     float distance = sdf(ray.o);
-    if (distance <= 0.01) {
+    if (fabs(distance) <= 0.001) {
       auto normal   = compute_normal(ray.o);
       auto light    = normalize(vec3f{0.2, 1, 0});
-      auto color    = vec3f(0.8, 0.2, 0.1);
+      auto clr      = vec3f{1, 1, 1};
       auto ambient  = min((normal.y + 1) * 0.1f, 0.1f);
       auto radiance = vec3f(0);
-      radiance += max(dot(normal, light), 0.0f);
-      radiance += ambient;
-      return color * radiance;
+      radiance += clr * eval_brdfcos(material, normal, -ray.d, light);
+      radiance += ambient * material.diffuse;
+      return radiance;
     }
 
     if (abs(ray.o).x > 1) return vec3f(0.1);
