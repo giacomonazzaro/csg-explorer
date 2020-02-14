@@ -22,25 +22,27 @@ struct CsgNode {
   };
 };
 
-inline CsgNode make_primitive_node(const CsgPrimitve& primitive) {
-  auto node      = CsgNode();
-  node.children  = {-1, -1};
-  node.primitive = primitive;
-  return node;
-}
-
-inline CsgNode make_operation_node(
-    const CsgOperation& operation, const vec2i& children) {
-  auto node      = CsgNode();
-  node.children  = children;
-  node.operation = operation;
-  return node;
-}
-
 struct CsgTree {
   vector<CsgNode> nodes = {};
   int             root  = -1;
 };
+
+inline int add_primitive(CsgTree& csg, const CsgPrimitve& primitive) {
+    auto node      = CsgNode();
+    node.children  = {-1, -1};
+    node.primitive = primitive;
+    csg.nodes.push_back(node);
+    return csg.nodes.size() - 1;
+}
+
+inline int add_operation(
+                         CsgTree& csg, const CsgOperation& operation, const vec2i& children) {
+    auto node      = CsgNode();
+    node.children  = children;
+    node.operation = operation;
+    csg.nodes.push_back(node);
+    return csg.nodes.size() - 1;
+}
 
 using Csg = CsgTree;
 

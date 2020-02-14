@@ -291,7 +291,7 @@ Csg parse_csg(const string& filename) {
     if (assignment) {
       if (csg.nodes.empty()) csg.root = 0;
       names[lhs] = csg.nodes.size();
-      csg.nodes.push_back(make_primitive_node(primitive));
+      add_primitive(csg, primitive);
     } else {
       assert(parent != -1);
       auto backup                  = csg.nodes[parent];
@@ -303,7 +303,7 @@ Csg parse_csg(const string& filename) {
         csg.nodes[parent].children.y = child;
       } else {
         csg.nodes[parent].children.y = csg.nodes.size();
-        csg.nodes.push_back(make_primitive_node(primitive));
+        add_primitive(csg, primitive);
       }
     }
   }
