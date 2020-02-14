@@ -241,9 +241,7 @@ Csg parse_csg(const string& filename) {
     add_edit(csg, parent, operation, primitive);
   }
 
-#if BAKE
-  return bake_eval_csg(csg);
-#else
+  optimize_csg(csg);
   return csg;
-#endif
+
 }

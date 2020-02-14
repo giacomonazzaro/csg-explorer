@@ -14,24 +14,12 @@ struct CsgPrimitve {
   primitive_type type;
 };
 
-struct CsgXXX {
-  vec2i children;
+struct CsgNode {
+  vec2i children = {-1, -1};
   union {
     CsgOperation operation;
     CsgPrimitve  primitive;
   };
-};
-
-struct CsgNode {
-  int   parent   = -1;
-  vec2i children = {-1, -1};
-
-  //  union {
-  CsgOperation operation;
-  CsgPrimitve  primitive;
-  //  };
-
-  CsgNode() {}
 };
 
 struct CsgTree {
@@ -39,13 +27,7 @@ struct CsgTree {
   int             root  = -1;
 };
 
-#define BAKE 0
-
-#if BAKE
-using Csg = vector<CsgXXX>;
-#else
 using Csg = CsgTree;
-#endif
 
 inline float smin(float a, float b, float k) {
   if (k == 0) return yocto::min(a, b);
@@ -95,17 +77,17 @@ inline float eval_csg(const CsgTree& csg, const vec3f& position) {
   return eval_csg(csg, position, csg.nodes[csg.root]);
 }
 
-inline void bake_eval_csg(
-    const CsgTree& csg, int n, vector<CsgXXX>& result, vector<int>& mapping) {
+inline void optimize_csg_internal(
+    const CsgTree& csg, int n, vector<CsgNode>& result, vector<int>& mapping) {
   auto& node = csg.nodes[n];
-  auto  f    = CsgXXX{};
+  auto  f    = CsgNode{};
 
   if (node.children == vec2i{-1, -1}) {
     f.children  = {-1, -1};
     f.primitive = node.primitive;
   } else {
-    bake_eval_csg(csg, node.children.x, result, mapping);
-    bake_eval_csg(csg, node.children.y, result, mapping);
+    optimize_csg_internal(csg, node.children.x, result, mapping);
+    optimize_csg_internal(csg, node.children.y, result, mapping);
     f.children  = {mapping[node.children.x], mapping[node.children.y]};
     f.operation = node.operation;
   }
@@ -113,14 +95,15 @@ inline void bake_eval_csg(
   result.push_back(f);
 }
 
-inline vector<CsgXXX> bake_eval_csg(const CsgTree& csg) {
-  auto result  = vector<CsgXXX>();
+inline void optimize_csg(CsgTree& csg) {
+  auto result  = CsgTree{};
   auto mapping = vector<int>(csg.nodes.size(), -1);
-  bake_eval_csg(csg, csg.root, result, mapping);
-  return result;
+  optimize_csg_internal(csg, csg.root, result.nodes, mapping);
+  result.root = result.nodes.size() - 1;
+  std::swap(csg, result);
 }
 
-inline float eval_csg(const vector<CsgXXX>& csg, const vec3f& position) {
+inline float eval_csg(const vector<CsgNode>& csg, const vec3f& position) {
   auto values = vector<float>(csg.size());
   for (int i = 0; i < csg.size(); i++) {
     auto& inst = csg[i];
@@ -149,18 +132,12 @@ inline int add_edit(
   if (parent == csg.root) {
     csg.nodes.push_back({});
     csg.nodes.push_back({});
-    auto& root = csg.nodes[index];
-    auto& n    = csg.nodes[index + 1];
-
-    csg.root                 = index;
-    csg.nodes[parent].parent = csg.root;
-
+    auto& root     = csg.nodes[index];
+    auto& n        = csg.nodes[index + 1];
+    csg.root       = index;
     root.children  = {parent, index + 1};
     root.operation = op;
-
-    n.parent    = csg.root;
-    n.primitive = prim;
-
+    n.primitive    = prim;
     return index + 1;
   }
 
@@ -169,12 +146,10 @@ inline int add_edit(
 
   // old
   auto& a     = csg.nodes.emplace_back();
-  a.parent    = parent;
   a.operation = csg.nodes[parent].operation;
 
   // new
   auto& b     = csg.nodes.emplace_back();
-  b.parent    = parent;
   b.primitive = prim;
 
   csg.nodes[parent].children  = {index, index + 1};
