@@ -53,7 +53,11 @@ static void skip_whitespace(string_view& str) {
 //  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 //  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
 //}
-// static bool is_digit(char c) { return c >= '0' && c <= '9'; }
+static bool is_digit(char c) { return c >= '0' && c <= '9'; }
+static bool is_number(char c) {
+  return (c >= '0' && c <= '9') || c == '+' || c == '-';
+}
+
 // static bool is_alpha(char c) {
 //  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 //}
@@ -199,11 +203,29 @@ void parse_value(file_wrapper& fs, string_view& str, T& value) {
   }
 }
 
+void parse_primitive(
+    string_view& str, CsgPrimitve& primitive, const string& name) {
+  if (name == "sphere") {
+    primitive.type = primitive_type::sphere;
+  } else if (name == "cube") {
+    primitive.type = primitive_type::box;
+  } else {
+    assert(0);
+  }
+  int num_params;
+  if (primitive.type == primitive_type::sphere) num_params = 4;
+  if (primitive.type == primitive_type::box) num_params = 4;
+  for (int i = 0; i < num_params; i++) {
+    parse_value(str, primitive.params[i]);
+  }
+}
+
 Csg parse_csg(const string& filename) {
   auto csg = CsgTree{};
 
-  auto fs = open_file(filename, "rb");
-  char buffer[4096];
+  auto                       fs = open_file(filename, "rb");
+  char                       buffer[4096];
+  unordered_map<string, int> names;
 
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
@@ -212,36 +234,80 @@ Csg parse_csg(const string& filename) {
     skip_whitespace(str);
     if (str.empty()) continue;
 
-    auto primitive = CsgPrimitve{};
-    auto operation = CsgOperation{};
-    int  parent    = -1;
+    auto   primitive = CsgPrimitve{};
+    auto   operation = CsgOperation{};
+    string lhs;
+    parse_value(str, lhs);
+    assert(lhs != "sphere");
+    assert(lhs != "cube");
 
-    parse_value(str, parent);
-    if (parent == -1) parent = csg.root;
+    // operation
+    skip_whitespace(str);
+    operation.blend = +1;
+    bool assignment = (str[0] == '=');
+    bool add        = (str[0] == '+' && str[1] == '=');
+    bool sub        = (str[0] == '-' && str[1] == '=');
+    if (!assignment && !add && !sub) {
+      //      printf("%s\n", str.c_str());
+      assert(0 && "Not a valid operator.");
+      // @Check =, += or -=
+    }
+    int parent = -1;
 
-    parse_value(str, operation.blend);
-    parse_value(str, operation.softness);
+    if (assignment) {
+      str.remove_prefix(1);
+      names[lhs] = csg.nodes.size();
+    } else {
+      str.remove_prefix(2);
+      parent = names.at(lhs);
+    }
+    skip_whitespace(str);
 
-    string primitive_name = "";
-    parse_value(str, primitive_name);
-    if (primitive_name == "sphere")
-      primitive.type = primitive_type::sphere;
-    else if (primitive_name == "cube")
-      primitive.type = primitive_type::box;
-    else
-      assert(0);
+    if (is_number(str[0])) {
+      parse_value(str, operation.blend);
+      skip_whitespace(str);
 
-    int num_params;
-    if (primitive.type == primitive_type::sphere) num_params = 4;
-    if (primitive.type == primitive_type::box) num_params = 4;
-    for (int i = 0; i < num_params; i++) {
-      parse_value(str, primitive.params[i]);
+      operation.softness = 0;
+      if (is_number(str[0])) {
+        parse_value(str, operation.softness);
+        // @Check in [0, 1]
+        skip_whitespace(str);
+      }
+    }
+    if (sub) operation.blend = -operation.blend;
+
+    string rhs;
+    parse_value(str, rhs);
+    int  child = -1;
+    auto it    = names.find(rhs);
+
+    // rhs is a name or primitve
+    if (it != names.end()) {
+      child = it->second;
+    } else {
+      parse_primitive(str, primitive, rhs);
     }
 
-    add_edit(csg, parent, operation, primitive);
+    if (assignment) {
+      if (csg.nodes.empty()) csg.root = 0;
+      names[lhs] = csg.nodes.size();
+      csg.nodes.push_back(make_primitive_node(primitive));
+    } else {
+      assert(parent != -1);
+      auto backup                  = csg.nodes[parent];
+      csg.nodes[parent].operation  = operation;
+      csg.nodes[parent].children.x = csg.nodes.size();
+      csg.nodes.push_back(backup);
+
+      if (child != -1) {
+        csg.nodes[parent].children.y = child;
+      } else {
+        csg.nodes[parent].children.y = csg.nodes.size();
+        csg.nodes.push_back(make_primitive_node(primitive));
+      }
+    }
   }
 
   optimize_csg(csg);
   return csg;
-
 }
