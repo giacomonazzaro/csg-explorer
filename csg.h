@@ -58,39 +58,36 @@ inline float smax(float a, float b, float k) {
   float h = max(k - yocto::abs(a - b), 0.0) / k;
   return max(a, b) + h * h * k * (1.0 / 4.0);
 };
-
 inline float eval_primitive(
-    const vec3f& position, primitive_type primitive, const float* params) {
-  if (primitive == primitive_type::sphere) {
-    auto center = vec3f{params[0], params[1], params[2]};
-    auto radius = params[3];
-    return length(position - center) - radius;
+    const vec3f& position, const CsgPrimitve& primitive) {
+  if (primitive.type == primitive_type::sphere) {
+    auto center = (const vec3f*)primitive.params;
+    auto radius = primitive.params[3];
+    return length(position - *center) - radius;
   }
-  if (primitive == primitive_type::box) {
+  if (primitive.type == primitive_type::box) {
     return 1;
   }
   assert(0);
   return 1;
 }
 
-inline float eval_operation(float f, float g, float blend, float softness) {
-  if (blend >= 0) {
-    return lerp(f, smin(f, g, softness), blend);
+inline float eval_operation(float f, float g, const CsgOperation& operation) {
+  if (operation.blend >= 0) {
+    return lerp(f, smin(f, g, operation.softness), operation.blend);
   } else {
-    return lerp(f, smax(f, -g, softness), -blend);
+    return lerp(f, smax(f, -g, operation.softness), -operation.blend);
   }
 }
 
 inline float eval_csg(
     const CsgTree& csg, const vec3f& position, const CsgNode& node) {
   if (node.children == vec2i{-1, -1}) {
-    auto [params, type] = node.primitive;
-    return eval_primitive(position, type, params);
+    return eval_primitive(position, node.primitive);
   } else {
     auto f = eval_csg(csg, position, csg.nodes[node.children.x]);
     auto g = eval_csg(csg, position, csg.nodes[node.children.y]);
-    auto [blend, softness] = node.operation;
-    return eval_operation(f, g, blend, softness);
+    return eval_operation(f, g, node.operation);
   }
 }
 
@@ -104,23 +101,16 @@ inline void bake_eval_csg(
   auto  f    = CsgXXX{};
 
   if (node.children == vec2i{-1, -1}) {
-    auto& primitive = node.primitive;
-    for (int i = 0; i < 16; i++) f.primitive.params[i] = primitive.params[i];
-    f.primitive.type = primitive.type;
-    f.children       = {-1, -1};
-    mapping[n]       = result.size();
-    result.push_back(f);
+    f.children  = {-1, -1};
+    f.primitive = node.primitive;
   } else {
     bake_eval_csg(csg, node.children.x, result, mapping);
     bake_eval_csg(csg, node.children.y, result, mapping);
-    assert(mapping[node.children.x] != -1);
-    assert(mapping[node.children.y] != -1);
-    f.children           = {mapping[node.children.x], mapping[node.children.y]};
-    f.operation.blend    = node.operation.blend;
-    f.operation.softness = node.operation.softness;
-    mapping[n]           = result.size();
-    result.push_back(f);
+    f.children  = {mapping[node.children.x], mapping[node.children.y]};
+    f.operation = node.operation;
   }
+  mapping[n] = result.size();
+  result.push_back(f);
 }
 
 inline vector<CsgXXX> bake_eval_csg(const CsgTree& csg) {
@@ -135,13 +125,11 @@ inline float eval_csg(const vector<CsgXXX>& csg, const vec3f& position) {
   for (int i = 0; i < csg.size(); i++) {
     auto& inst = csg[i];
     if (inst.children == vec2i{-1, -1}) {
-      values[i] = eval_primitive(
-          position, inst.primitive.type, inst.primitive.params);
+      values[i] = eval_primitive(position, inst.primitive);
     } else {
       auto f    = values[inst.children.x];
       auto g    = values[inst.children.y];
-      values[i] = eval_operation(
-          f, g, inst.operation.blend, inst.operation.softness);
+      values[i] = eval_operation(f, g, inst.operation);
     }
   }
   return values.back();
