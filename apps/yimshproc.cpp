@@ -21,7 +21,7 @@ void my_init(my_data& data, shared_ptr<app_state> app) {
 }
 
 void my_keycallback(
-    my_data& data, shared_ptr<app_state> app, int key, bool pressing) {
+    my_data& data, shared_ptr<app_state> app, opengl_key key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
@@ -29,18 +29,18 @@ void my_keycallback(
   auto enter = 257;
   auto esc   = 256;
 
-  if (key == enter) {
+    if (key == opengl_key::enter) {
     printf("Enter pressed!\n");
   }
 
-  if (key == esc) {
+  if (key == opengl_key::escape) {
     printf("Esc pressed!\n");
     init_camera(app);
     set_camera(app->scene, 0, app->camera.frame, app->camera.lens,
         app->camera.aspect, app->camera.film, 0.001, 10000);
   }
 
-  if (key == 'z') {
+  if (key == opengl_key('Z')) {
     printf("Z pressed!\n");
   }
 }
@@ -147,7 +147,7 @@ void run_app(int argc, const char* argv[]) {
     print_elapsed(timer);
   };
   auto key_callback = [&data](
-                          shared_ptr<app_state> app, int key, bool pressing) {
+                          shared_ptr<app_state> app, opengl_key key, bool pressing) {
     my_keycallback(data, app, key, pressing);
   };
   auto click_callback = [&data](shared_ptr<app_state> a, int f, vec2f uv, int v,

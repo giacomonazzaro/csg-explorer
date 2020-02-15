@@ -334,6 +334,85 @@ namespace yocto {
 // Forward declaration of OpenGL window
 struct opengl_window;
 
+enum struct opengl_key : int {
+  // For printable keys, just use the constructor, like opengl_key('*')
+  // For chars, always use upper case!
+
+  // Function keys
+  escape    = 256,
+  enter     = 257,
+  tab       = 258,
+  backspace = 259,
+  insert    = 260,
+  //  delete    = 261,
+  right         = 262,
+  left          = 263,
+  down          = 264,
+  up            = 265,
+  page_up       = 266,
+  page_down     = 267,
+  home          = 268,
+  end           = 269,
+  caps_lock     = 280,
+  scroll_lock   = 281,
+  num_lock      = 282,
+  print_screen  = 283,
+  pause         = 284,
+  f1            = 290,
+  f2            = 291,
+  f3            = 292,
+  f4            = 293,
+  f5            = 294,
+  f6            = 295,
+  f7            = 296,
+  f8            = 297,
+  f9            = 298,
+  f10           = 299,
+  f11           = 300,
+  f12           = 301,
+  f13           = 302,
+  f14           = 303,
+  f15           = 304,
+  f16           = 305,
+  f17           = 306,
+  f18           = 307,
+  f19           = 308,
+  f20           = 309,
+  f21           = 310,
+  f22           = 311,
+  f23           = 312,
+  f24           = 313,
+  f25           = 314,
+  kp_0          = 320,
+  kp_1          = 321,
+  kp_2          = 322,
+  kp_3          = 323,
+  kp_4          = 324,
+  kp_5          = 325,
+  kp_6          = 326,
+  kp_7          = 327,
+  kp_8          = 328,
+  kp_9          = 329,
+  kp_decimal    = 330,
+  kp_divide     = 331,
+  kp_multiply   = 332,
+  kp_subtract   = 333,
+  kp_add        = 334,
+  kp_enter      = 335,
+  kp_equal      = 336,
+  left_shift    = 340,
+  left_control  = 341,
+  left_alt      = 342,
+  left_super    = 343,
+  right_shift   = 344,
+  right_control = 345,
+  right_alt     = 346,
+  right_super   = 347,
+  menu          = 348,
+  world_1       = 161,  //  non-us #1
+  world_2       = 162   //  non-us #2
+};
+
 // Input state
 struct opengl_input {
   bool     mouse_left           = false;  // left button
@@ -364,8 +443,8 @@ using widgets_glcallback =
 using drop_glcallback = std::function<void(
     const opengl_window&, const vector<string>&, const opengl_input& input)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
-using key_glcallback = std::function<void(
-    const opengl_window&, int key, bool pressed, const opengl_input& input)>;
+using key_glcallback = std::function<void(const opengl_window&, opengl_key key,
+    bool pressed, const opengl_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_glcallback = std::function<void(

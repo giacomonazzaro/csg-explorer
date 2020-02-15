@@ -1529,7 +1529,8 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   glfwSetKeyCallback(win.win,
       [](GLFWwindow* glfw, int key, int scancode, int action, int mods) {
         auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win.key_cb) win.key_cb(win, key, (bool)action, win.input);
+        if (win.key_cb)
+          win.key_cb(win, opengl_key(key), (bool)action, win.input);
       });
   glfwSetMouseButtonCallback(
       win.win, [](GLFWwindow* glfw, int button, int action, int mods) {

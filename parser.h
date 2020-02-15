@@ -220,15 +220,56 @@ void parse_primitive(
   }
 }
 
+inline string tree_to_string(const CsgTree& tree) {
+  string result = "graph {\n";
+  result += "forcelabels=true\n";
+
+  for (int i = 0; i < tree.nodes.size(); i++) {
+    auto color = vec3f(0.0, 0.0, 0.8);
+    char str[256];
+    sprintf(str, "%d [label=\"%d\" style=filled fillcolor=\" %f %f %f\"]", i, i,
+        color.x, color.y, color.z);
+    result += std::string(str);
+
+    if (tree.nodes[i].children == vec2i{-1, -1}) {
+      result += std::to_string(i) + "\n";
+
+      sprintf(str, "%d [label=\"sphere\n%.1f %.1f %.1f %.1f\"]\n", i,
+          tree.nodes[i].primitive.params[0], tree.nodes[i].primitive.params[1],
+          tree.nodes[i].primitive.params[2], tree.nodes[i].primitive.params[3]);
+      result += std::string(str);
+    } else {
+      int c = tree.nodes[i].children.x;
+      result += std::to_string(i) + " -- " + std::to_string(c) + "\n";
+      c = tree.nodes[i].children.y;
+      result += std::to_string(i) + " -- " + std::to_string(c) + "\n";
+
+      sprintf(str, "%d [label=\"op\n%.1f %.1f\"]\n", i,
+          tree.nodes[i].operation.blend, tree.nodes[i].operation.softness);
+      result += std::string(str);
+    }
+  }
+  result += "}\n";
+  return result;
+}
+
+void save_tree_png(const CsgTree& tree, const string& filename) {
+  FILE* file = fopen((filename + ".txt").c_str(), "w");
+  fprintf(file, "%s", tree_to_string(tree).c_str());
+  fclose(file);
+  system(
+      ("dot -Tpng " + filename + ".txt" + " > " + filename + ".png").c_str());
+}
+
 Csg parse_csg(const string& filename) {
   auto csg = CsgTree{};
 
   auto                       fs = open_file(filename, "rb");
   char                       buffer[4096];
   unordered_map<string, int> names;
+  int                        step = 0;
 
   while (read_line(fs, buffer, sizeof(buffer))) {
-    // str
     auto str = string_view{buffer};
     skip_comment(str);
     skip_whitespace(str);
@@ -248,7 +289,6 @@ Csg parse_csg(const string& filename) {
     bool add        = (str[0] == '+' && str[1] == '=');
     bool sub        = (str[0] == '-' && str[1] == '=');
     if (!assignment && !add && !sub) {
-      //      printf("%s\n", str.c_str());
       assert(0 && "Not a valid operator.");
       // @Check =, += or -=
     }
@@ -283,30 +323,36 @@ Csg parse_csg(const string& filename) {
 
     // rhs is a name or primitve
     if (it != names.end()) {
+      // ex: lhs = rhs
+      // ex: lhs += rhs
       child = it->second;
     } else {
+      // ex: lhs = sphere
+      // ex: lhs += sphere
       parse_primitive(str, primitive, rhs);
+      if (!assignment) {
+        // ex: lhs += sphere
+        child = add_primitive(csg, primitive);
+      }
     }
 
     if (assignment) {
       if (csg.nodes.empty()) csg.root = 0;
-      names[lhs] = csg.nodes.size();
-      add_primitive(csg, primitive);
+      names[lhs] = add_primitive(csg, primitive);
     } else {
       assert(parent != -1);
       auto backup                  = csg.nodes[parent];
       csg.nodes[parent].operation  = operation;
       csg.nodes[parent].children.x = csg.nodes.size();
+      csg.nodes[parent].children.y = child;
       csg.nodes.push_back(backup);
-
-      if (child != -1) {
-        csg.nodes[parent].children.y = child;
-      } else {
-        csg.nodes[parent].children.y = csg.nodes.size();
-        add_primitive(csg, primitive);
-      }
     }
+
+    save_tree_png(csg, "tree" + std::to_string(step));
+    step += 1;
   }
+  save_tree_png(csg, "tree");
+  system(("rm tree*.txt"s).c_str());
 
   optimize_csg(csg);
   return csg;

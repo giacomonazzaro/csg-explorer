@@ -12,7 +12,7 @@ using namespace std;
 struct app_state {
   // Callbacks available for user to build its own behaviors
   function<void(shared_ptr<app_state>)>                         init;
-  function<void(shared_ptr<app_state>, int, bool)>              key_callback;
+  function<void(shared_ptr<app_state>, opengl_key, bool)>       key_callback;
   function<void(shared_ptr<app_state>, int, vec2f, int, float)> click_callback;
   function<void(shared_ptr<app_state>, const opengl_window&)>   draw_glwidgets;
 
@@ -224,7 +224,7 @@ void clear(shared_ptr<app_state> app) {
 
 void yimshproc(const string&                         input_filename,
     function<void(shared_ptr<app_state>)>            init,
-    function<void(shared_ptr<app_state>, int, bool)> key_callback,
+    function<void(shared_ptr<app_state>, opengl_key, bool)> key_callback,
     function<void(shared_ptr<app_state>, int, vec2f, int, float)>
         click_callback,
     function<void(shared_ptr<app_state>, const opengl_window& win)>
@@ -294,7 +294,7 @@ void yimshproc(const string&                         input_filename,
     set_camera(app->scene, 0, app->camera.frame, app->camera.lens,
         app->camera.aspect, app->camera.film, 0.001, 10000);
   });
-  set_key_glcallback(win, [app](const opengl_window& win, int key,
+  set_key_glcallback(win, [app](const opengl_window& win, opengl_key key,
                               bool pressing, const opengl_input& input) {
     app->key_callback(app, key, pressing);
   });
