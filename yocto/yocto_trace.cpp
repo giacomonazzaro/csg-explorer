@@ -2978,9 +2978,12 @@ vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
       return radiance;
     }
 
-    if (abs(ray.o).x > 1) return vec3f(0.1);
-    if (abs(ray.o).y > 1) return vec3f(0.1);
-    if (abs(ray.o).z > 1) return vec3f(0.1);
+    if (ray.o.x > 1) return vec3f(0.01);
+    if (ray.o.y > 1) return vec3f(0.01);
+    if (ray.o.z > 1) return vec3f(0.01);
+    if (ray.o.x < 0) return vec3f(0.01);
+    if (ray.o.y < 0) return vec3f(0.01);
+    if (ray.o.z < 0) return vec3f(0.01);
     ray.o += ray.d * distance;
   }
 
