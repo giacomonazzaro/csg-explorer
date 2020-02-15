@@ -296,8 +296,7 @@ void run_app(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene    = sceneio_model{};
-  auto load_timer = print_timed("parsing csg");
+  auto ioscene = sceneio_model{};
   // load_scene(app->filename, ioscene);
   auto camera  = sceneio_camera{};
   auto from    = vec3f{2, 2, 2};
@@ -307,8 +306,6 @@ void run_app(int argc, const char* argv[]) {
   ioscene.cameras.push_back(camera);
 
   app->csg = parse_csg(app->filename);
-
-  print_elapsed(load_timer);
 
   // conversion
   auto convert_timer = print_timed("converting");

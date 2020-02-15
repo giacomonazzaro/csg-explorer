@@ -1,5 +1,6 @@
 #pragma once
 #include <string_view>
+#include <unordered_set>
 using namespace std;
 
 #include "csg.h"
@@ -203,14 +204,14 @@ void parse_value(file_wrapper& fs, string_view& str, T& value) {
   }
 }
 
-void parse_primitive(
+int parse_primitive(
     string_view& str, CsgPrimitve& primitive, const string& name) {
   if (name == "sphere") {
     primitive.type = primitive_type::sphere;
   } else if (name == "cube") {
     primitive.type = primitive_type::box;
   } else {
-    assert(0);
+    return false;
   }
   int num_params;
   if (primitive.type == primitive_type::sphere) num_params = 4;
@@ -218,6 +219,7 @@ void parse_primitive(
   for (int i = 0; i < num_params; i++) {
     parse_value(str, primitive.params[i]);
   }
+  return true;
 }
 
 inline string tree_to_string(const CsgTree& tree) {
@@ -261,16 +263,42 @@ void save_tree_png(const CsgTree& tree, const string& filename) {
       ("dot -Tpng " + filename + ".txt" + " > " + filename + ".png").c_str());
 }
 
+struct CsgParser {
+  char buffer[4096];
+  int  line         = 0;
+  int  instructions = 0;
+};
+
+// https://stackoverflow.com/questions/5878775/how-to-find-and-replace-string/5878802
+void replace(std::string& subject, const std::string& search,
+    const std::string& replace) {
+  size_t pos = 0;
+  while ((pos = subject.find(search, pos)) != std::string::npos) {
+    subject.replace(pos, search.length(), replace);
+    pos += replace.length();
+  }
+}
+
+void parser_error(const CsgParser& parser, string message) {
+  printf("\n\tParse error at line %d: \n\t %s\n\twhy?:\n\t %s\n\t", parser.line,
+      parser.buffer, message.c_str());
+  exit(1);
+}
+
 Csg parse_csg(const string& filename) {
   auto csg = CsgTree{};
 
   auto                       fs = open_file(filename, "rb");
-  char                       buffer[4096];
   unordered_map<string, int> names;
+  std::unordered_set<string> names_used;
   int                        step = 0;
-
-  while (read_line(fs, buffer, sizeof(buffer))) {
-    auto str = string_view{buffer};
+  CsgParser                  parser;
+  parser.line = 1;
+  for (;; parser.line += 1) {
+    if (!read_line(fs, parser.buffer, sizeof(parser.buffer))) {
+      break;
+    }
+    auto str = string_view{parser.buffer};
     skip_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -296,25 +324,39 @@ Csg parse_csg(const string& filename) {
 
     if (assignment) {
       str.remove_prefix(1);
+      skip_whitespace(str);
       names[lhs] = csg.nodes.size();
     } else {
-      str.remove_prefix(2);
-      parent = names.at(lhs);
-    }
-    skip_whitespace(str);
+      if (parser.instructions == 0) {
+        parser_error(parser, "First edit must be an assignment.");
+      }
 
-    if (is_number(str[0])) {
-      parse_value(str, operation.blend);
+      str.remove_prefix(2);
       skip_whitespace(str);
 
-      operation.softness = 0;
-      if (is_number(str[0])) {
-        parse_value(str, operation.softness);
-        // @Check in [0, 1]
-        skip_whitespace(str);
+      if (names.find(lhs) == names.end()) {
+        if (names_used.count(lhs)) {
+          parser_error(parser, "Cannot modify node \"" + lhs +
+                                   "\" because it was already used.");
+        } else {
+          parser_error(parser, "Cannot find node named \"" + lhs + "\".");
+        }
+      } else {
+        parent = names.at(lhs);
       }
+
+      // Apply operators modifiers only on += and -=.
+      if (is_number(str[0])) {
+        parse_value(str, operation.blend);
+        skip_whitespace(str);
+
+        operation.softness = 0;
+        if (is_number(str[0])) {
+          parse_value(str, operation.softness);
+        }
+      }
+      if (sub) operation.blend = -operation.blend;
     }
-    if (sub) operation.blend = -operation.blend;
 
     string rhs;
     parse_value(str, rhs);
@@ -326,10 +368,16 @@ Csg parse_csg(const string& filename) {
       // ex: lhs = rhs
       // ex: lhs += rhs
       child = it->second;
+      names_used.insert(rhs);
+      names.erase(it);
     } else {
       // ex: lhs = sphere
       // ex: lhs += sphere
-      parse_primitive(str, primitive, rhs);
+      auto success = parse_primitive(str, primitive, rhs);
+      if (!success) {
+        parser_error(
+            parser, "Expected primitive or node name. Found: \"" + rhs + "\".");
+      }
       if (!assignment) {
         // ex: lhs += sphere
         child = add_primitive(csg, primitive);
@@ -348,12 +396,12 @@ Csg parse_csg(const string& filename) {
       csg.nodes.push_back(backup);
     }
 
-    save_tree_png(csg, "tree" + std::to_string(step));
-    step += 1;
+    save_tree_png(csg, "tree" + std::to_string(parser.instructions));
+    parser.instructions += 1;
   }
-  save_tree_png(csg, "tree");
-  system(("rm tree*.txt"s).c_str());
 
   optimize_csg(csg);
+  save_tree_png(csg, "tree");
+  system(("rm tree*.txt"s).c_str());
   return csg;
 }

@@ -2,7 +2,15 @@ center = sphere 0.0 0.0 -0.1 0.4
 
 eyes = sphere 0.2 0.2 0.25 0.1
 eyes += sphere -0.2 0.2 0.25 0.1
-center -= eyes
+center -= 1.0 0.05 eyes
 
-nose = 0.7 0.1 sphere 0.0 0.0 0.3 0.1
-center += nose
+nose = sphere 0.0 0.0 0.3 0.1
+center += 1.0 0.05 nose
+
+cos = sphere 0.0 0.0 0.3 0.1
+cos += sphere 0.0 0.0 0.3 0.1
+cos += sphere 0.0 0.0 0.3 0.1
+cos += sphere 0.0 0.0 0.3 0.1
+cos += sphere 0.0 0.0 0.3 0.1
+cos += sphere 0.0 0.0 0.3 0.1
+cos += sphere 0.0 0.0 0.3 0.1
