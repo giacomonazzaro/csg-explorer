@@ -8,3 +8,7 @@ out
 .vscode/ipch/
 tests1/
 .vs
+*CMakefiles*
+*Makefile*
+*CMakeCache*
+*.cmake

@@ -305,7 +305,7 @@ void run_app(int argc, const char* argv[]) {
   camera.focus = length(from - to);
   ioscene.cameras.push_back(camera);
 
-  app->csg = parse_csg(app->filename);
+  app->csg = load_csg(app->filename);
 
   // conversion
   auto convert_timer = print_timed("converting");

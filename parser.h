@@ -285,7 +285,7 @@ void parser_error(const CsgParser& parser, string message) {
   exit(1);
 }
 
-Csg parse_csg(const string& filename) {
+Csg load_csg(const string& filename) {
   auto csg = CsgTree{};
 
   auto                       fs = open_file(filename, "rb");
