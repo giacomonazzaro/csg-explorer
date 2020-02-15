@@ -25,15 +25,15 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
-
-#include "../csg.h"
-#include "../parser.h"
-#include "../yocto/yocto_common.h"
-#include "../yocto/yocto_commonio.h"
-#include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_trace.h"
-#include "yocto_opengl.h"
+#include "csg.h"
+#include "parser.h"
+//
+#include "ext/yocto-gl/apps/yocto_opengl.h"
+#include "ext/yocto-gl/yocto/yocto_common.h"
+#include "ext/yocto-gl/yocto/yocto_commonio.h"
+#include "ext/yocto-gl/yocto/yocto_sceneio.h"
+#include "ext/yocto-gl/yocto/yocto_shape.h"
+#include "ext/yocto-gl/yocto/yocto_trace.h"
 using namespace yocto;
 
 #include <future>
@@ -267,33 +267,35 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
-void run_app(int argc, const char* argv[]) {
+void run_app(const string& filename) {
   // application
-  auto app = make_shared<app_state>();
+  auto app      = make_shared<app_state>();
+  app->filename = filename;
 
   // parse command line
-  auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", app->params.camera, "Camera index.");
-  add_cli_option(
-      cli, "--resolution,-r", app->params.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", app->params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app->params.sampler, "Tracer type.",
-      trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)app->params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_cli_option(
-      cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", app->params.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
-      "Environments are hidden in renderer");
-  add_cli_option(
-      cli, "--bvh", (int&)app->params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "--add-skyenv", app->add_skyenv, "Add sky envmap");
-  add_cli_option(cli, "--output,-o", app->imagename, "Image output", false);
-  add_cli_option(cli, "scene", app->filename, "Scene filename", true);
-  parse_cli(cli, argc, argv);
+  // auto cli = make_cli("yscnitrace", "progressive path tracing");
+  // add_cli_option(cli, "--camera", app->params.camera, "Camera index.");
+  // add_cli_option(
+  //     cli, "--resolution,-r", app->params.resolution, "Image resolution.");
+  // add_cli_option(
+  //     cli, "--samples,-s", app->params.samples, "Number of samples.");
+  // add_cli_option(cli, "--tracer,-t", (int&)app->params.sampler, "Tracer
+  // type.",
+  //     trace_sampler_names);
+  // add_cli_option(cli, "--falsecolor,-F", (int&)app->params.falsecolor,
+  //     "Tracer false color type.", trace_falsecolor_names);
+  // add_cli_option(
+  //     cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
+  // add_cli_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
+  // add_cli_option(cli, "--filter", app->params.tentfilter, "Filter image.");
+  // add_cli_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
+  //     "Environments are hidden in renderer");
+  // add_cli_option(
+  //     cli, "--bvh", (int&)app->params.bvh, "Bvh type", trace_bvh_names);
+  // add_cli_option(cli, "--add-skyenv", app->add_skyenv, "Add sky envmap");
+  // add_cli_option(cli, "--output,-o", app->imagename, "Image output", false);
+  // add_cli_option(cli, "scene", app->filename, "Scene filename", true);
+  // parse_cli(cli, argc, argv);
 
   // scene loading
   auto ioscene = sceneio_model{};
@@ -388,7 +390,7 @@ void run_app(int argc, const char* argv[]) {
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
+    run_app(argv[1]);
     return 0;
   } catch (std::exception& e) {
     print_fatal(e.what());

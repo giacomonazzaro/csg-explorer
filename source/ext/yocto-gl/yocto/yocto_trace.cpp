@@ -2917,8 +2917,6 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
   return {radiance, hit};
 }
 
-#include "../csg.h"
-
 // Eyelight for quick previewing.
 vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
     rng_state& rng, const trace_params& params) {

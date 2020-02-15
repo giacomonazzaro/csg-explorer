@@ -1,0 +1,14 @@
+bin
+build
+out
+.vscode/.cmaketools.json
+*.hdr
+*.exr
+*.png
+.vscode/ipch/
+tests1/
+.vs
+*CMakefiles*
+*Makefile*
+*CMakeCache*
+*.cmake

@@ -1,5 +1,5 @@
 #pragma once
-#include "yocto/yocto_math.h"
+#include "ext/yocto-gl/yocto/yocto_math.h"
 using namespace yocto;
 
 enum struct primitive_type { sphere, box, none };

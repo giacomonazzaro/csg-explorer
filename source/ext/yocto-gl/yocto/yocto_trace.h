@@ -63,7 +63,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "../csg.h"
+#include "../../../csg.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 
