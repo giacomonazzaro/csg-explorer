@@ -84,19 +84,19 @@ inline float eval_operation(float f, float g, const CsgOperation& operation) {
   }
 }
 
-inline float eval_csg(
+inline float eval_csg_recursive(
     const CsgTree& csg, const vec3f& position, const CsgNode& node) {
   if (node.children == vec2i{-1, -1}) {
     return eval_primitive(position, node.primitive);
   } else {
-    auto f = eval_csg(csg, position, csg.nodes[node.children.x]);
-    auto g = eval_csg(csg, position, csg.nodes[node.children.y]);
+    auto f = eval_csg_recursive(csg, position, csg.nodes[node.children.x]);
+    auto g = eval_csg_recursive(csg, position, csg.nodes[node.children.y]);
     return eval_operation(f, g, node.operation);
   }
 }
 
-inline float eval_csg(const CsgTree& csg, const vec3f& position) {
-  return eval_csg(csg, position, csg.nodes[csg.root]);
+inline float eval_csg_recursive(const CsgTree& csg, const vec3f& position) {
+  return eval_csg_recursive(csg, position, csg.nodes[csg.root]);
 }
 
 inline void optimize_csg_internal(
@@ -125,10 +125,11 @@ inline void optimize_csg(CsgTree& csg) {
   std::swap(csg, result);
 }
 
-inline float eval_csg(const vector<CsgNode>& csg, const vec3f& position) {
-  auto values = vector<float>(csg.size());
-  for (int i = 0; i < csg.size(); i++) {
-    auto& inst = csg[i];
+inline float eval_csg(const CsgTree& csg, const vec3f& position) {
+  assert(csg.root == csg.nodes.size() - 1);
+  auto values = vector<float>(csg.nodes.size());
+  for (int i = 0; i < csg.nodes.size(); i++) {
+    auto& inst = csg.nodes[i];
     if (inst.children == vec2i{-1, -1}) {
       values[i] = eval_primitive(position, inst.primitive);
     } else {
