@@ -2,6 +2,8 @@
 
 #include "../source/csg.h"
 #include "../source/parser.h"
+//
+#include "../source/ext/yocto-gl/apps/yscnitraces.cpp"
 
 float eval(const CsgTree& csg, float x, float y, float z) {
   return eval_csg(csg, {x, y, z});
@@ -14,6 +16,7 @@ PYBIND11_MODULE(pycsg, m) {
 
   m.def("eval", &eval);
   m.def("load_csg", &load_csg);
+  m.def("run_app", &run_app);
 
   py::class_<CsgTree>(m, "CsgTree")
       .def(py::init<>())

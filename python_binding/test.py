@@ -1,8 +1,9 @@
 import pycsg
 
-csg = pycsg.load_csg("../tests/test.csg")
+filename = "../tests/test.csg"
+csg = pycsg.load_csg(filename)
 x = pycsg.eval(csg, 0, 0, 0)
-print(x)
+pycsg.run_app(filename)
 
 
 
