@@ -50,8 +50,8 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params params = {};
-  int          pratio = 8;
+  trace_params params            = {};
+  int          preview_downscale = 6;
 
   // scene
   trace_scene scene = {};
@@ -237,14 +237,14 @@ void reset_display(shared_ptr<app_state> app) {
 
   // render preview
   auto preview_prms = app->params;
-  preview_prms.resolution /= app->pratio;
+  preview_prms.resolution /= app->preview_downscale;
   preview_prms.samples = 1;
   auto preview         = raymarch_image(app->scene, app->csg, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
-      auto pi              = clamp(i / app->pratio, 0, preview.size().x - 1),
-           pj              = clamp(j / app->pratio, 0, preview.size().y - 1);
+      auto pi = clamp(i / app->preview_downscale, 0, preview.size().x - 1),
+           pj = clamp(j / app->preview_downscale, 0, preview.size().y - 1);
       app->display[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -272,31 +272,6 @@ void run_app(const CsgTree& csg) {
   auto app = make_shared<app_state>();
   app->csg = csg;
 
-  // parse command line
-  // auto cli = make_cli("yscnitrace", "progressive path tracing");
-  // add_cli_option(cli, "--camera", app->params.camera, "Camera index.");
-  // add_cli_option(
-  //     cli, "--resolution,-r", app->params.resolution, "Image resolution.");
-  // add_cli_option(
-  //     cli, "--samples,-s", app->params.samples, "Number of samples.");
-  // add_cli_option(cli, "--tracer,-t", (int&)app->params.sampler, "Tracer
-  // type.",
-  //     trace_sampler_names);
-  // add_cli_option(cli, "--falsecolor,-F", (int&)app->params.falsecolor,
-  //     "Tracer false color type.", trace_falsecolor_names);
-  // add_cli_option(
-  //     cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
-  // add_cli_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
-  // add_cli_option(cli, "--filter", app->params.tentfilter, "Filter image.");
-  // add_cli_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
-  //     "Environments are hidden in renderer");
-  // add_cli_option(
-  //     cli, "--bvh", (int&)app->params.bvh, "Bvh type", trace_bvh_names);
-  // add_cli_option(cli, "--add-skyenv", app->add_skyenv, "Add sky envmap");
-  // add_cli_option(cli, "--output,-o", app->imagename, "Image output", false);
-  // add_cli_option(cli, "scene", app->filename, "Scene filename", true);
-  // parse_cli(cli, argc, argv);
-
   // scene loading
   auto ioscene = sceneio_model{};
   // load_scene(app->filename, ioscene);
@@ -309,31 +284,15 @@ void run_app(const CsgTree& csg) {
   ioscene.cameras.push_back(camera);
 
   // conversion
-  auto convert_timer = print_timed("converting");
   init_scene(app->scene, ioscene);
-  print_elapsed(convert_timer);
-
-  // build bvh
-  auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene, app->params);
-  print_elapsed(bvh_timer);
-
-  // init renderer
-  auto lights_timer = print_timed("building lights");
-  init_lights(app->scene);
-  print_elapsed(lights_timer);
-
-  // fix renderer type if no lights
-  if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
-    print_info("no lights presents, switching to eyelight shader");
-    app->params.sampler = trace_sampler_type::eyelight;
-  }
 
   // allocate buffers
   init_state(app->state, app->scene, app->params);
   app->render  = image{app->state.size(), zero4f};
   app->display = app->render;
   reset_display(app);
+
+  app->params.samples = 4;
 
   // window
   auto win = opengl_window{};
@@ -372,14 +331,6 @@ void run_app(const CsgTree& csg) {
         }
       });
 
-  // set_key_glcallback(win, [app](const opengl_window& win, opengl_key key,
-  //                             bool pressed, const opengl_input& input) {
-  //   if (pressed && key == opengl_key::enter) {
-  //     app->csg = parse_csg(app->filename);
-  //     reset_display(app);
-  //   }
-  // });
-
   // run ui
   run_ui(win);
 
@@ -388,11 +339,12 @@ void run_app(const CsgTree& csg) {
 }
 
 int main(int argc, const char* argv[]) {
-  try {
-    run_app(load_csg(argv[1]));
-    return 0;
-  } catch (std::exception& e) {
-    print_fatal(e.what());
-    return 1;
-  }
+  string filename;
+  // parse command line
+  auto cli = make_cli("michelangelo", "Csg renderer");
+  add_cli_option(cli, "scene", filename, "Scene filename", true);
+  parse_cli(cli, argc, argv);
+
+  auto csg = load_csg(filename);
+  run_app(csg);
 }
