@@ -2,10 +2,10 @@ head = sphere 0.0 0.0 -0.1 0.4
 
 orbits = sphere 0.2 0.2 0.25 0.1
 orbits += sphere -0.2 0.2 0.25 0.1
-head -= 0.8 0.05 orbits
+head -= 0.7 0.05 orbits
 
-eyes = sphere 0.16 0.16 0.165 0.03
-eyes += sphere -0.16 0.16 0.165 0.03
+eyes = sphere 0.16 0.16 0.18 0.03
+eyes += sphere -0.16 0.16 0.18 0.03
 head += eyes
 
 nose = sphere 0.0 0.0 0.3 0.1

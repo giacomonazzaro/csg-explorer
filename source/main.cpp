@@ -70,14 +70,16 @@ struct app_state {
   opengl_image        glimage  = {};
   draw_glimage_params glparams = {};
 
-  // editing
-  pair<string, int> selection = {"camera", 0};
-
   // computation
   int          render_sample  = 0;
   atomic<bool> render_stop    = {};
   future<void> render_future  = {};
   int          render_counter = 0;
+
+  // Enqueued commands
+  vector<function<void()>> commands = {};
+
+  void run(function<void()>&& f) { commands.push_back(f); }
 
   ~app_state() {
     render_stop = true;
@@ -230,6 +232,11 @@ void reset_display(shared_ptr<app_state> app) {
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
 
+  for (auto& f : app->commands) {
+    f();
+  }
+  app->commands.clear();
+
   // reset state
   init_state(app->state, app->scene, app->params);
   app->render.resize(app->state.size());
@@ -267,10 +274,11 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
-void run_app(const CsgTree& csg) {
+void run_app(const string& filename) {
   // application
-  auto app = make_shared<app_state>();
-  app->csg = csg;
+  auto app      = make_shared<app_state>();
+  app->csg      = load_csg(filename);
+  app->filename = filename;
 
   // scene loading
   auto ioscene = sceneio_model{};
@@ -331,6 +339,16 @@ void run_app(const CsgTree& csg) {
         }
       });
 
+  auto keycb = [app](const opengl_window& win, opengl_key key, bool pressed,
+                   const opengl_input& input) {
+    if (key == opengl_key::enter && pressed) {
+      app->run([app]() { app->csg = load_csg(app->filename); });
+      reset_display(app);
+    }
+  };
+
+  set_key_glcallback(win, keycb);
+
   // run ui
   run_ui(win);
 
@@ -345,6 +363,5 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "scene", filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
-  auto csg = load_csg(filename);
-  run_app(csg);
+  run_app(filename);
 }
