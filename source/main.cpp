@@ -267,10 +267,10 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
-void run_app(const string& filename) {
+void run_app(const CsgTree& csg) {
   // application
-  auto app      = make_shared<app_state>();
-  app->filename = filename;
+  auto app = make_shared<app_state>();
+  app->csg = csg;
 
   // parse command line
   // auto cli = make_cli("yscnitrace", "progressive path tracing");
@@ -300,14 +300,13 @@ void run_app(const string& filename) {
   // scene loading
   auto ioscene = sceneio_model{};
   // load_scene(app->filename, ioscene);
-  auto camera  = sceneio_camera{};
-  auto from    = vec3f{2, 2, 2};
-  auto to      = vec3f{0.5, 0.5, 0.5};
-  camera.frame = lookat_frame(from, to, {0, 1, 0});
-  camera.focus = length(from - to);
+  auto camera   = sceneio_camera{};
+  auto from     = vec3f{2, 2, 2};
+  auto to       = vec3f{0.5, 0.5, 0.5};
+  camera.aspect = 1;
+  camera.frame  = lookat_frame(from, to, {0, 1, 0});
+  camera.focus  = length(from - to);
   ioscene.cameras.push_back(camera);
-
-  app->csg = load_csg(app->filename);
 
   // conversion
   auto convert_timer = print_timed("converting");
@@ -338,7 +337,7 @@ void run_app(const string& filename) {
 
   // window
   auto win = opengl_window{};
-  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
+  init_glwindow(win, {720, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
@@ -390,7 +389,7 @@ void run_app(const string& filename) {
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argv[1]);
+    run_app(load_csg(argv[1]));
     return 0;
   } catch (std::exception& e) {
     print_fatal(e.what());

@@ -285,7 +285,7 @@ void parser_error(const CsgParser& parser, string message) {
   exit(1);
 }
 
-Csg load_csg(const string& filename) {
+Csg load_csg(const string& filename, bool debug_draw = false) {
   auto csg = CsgTree{};
 
   auto                       fs = open_file(filename, "rb");
@@ -396,12 +396,16 @@ Csg load_csg(const string& filename) {
       csg.nodes.push_back(backup);
     }
 
-    save_tree_png(csg, "tree" + std::to_string(parser.instructions));
+    if (debug_draw) {
+      save_tree_png(csg, "tree" + std::to_string(parser.instructions));
+    }
     parser.instructions += 1;
   }
 
   optimize_csg(csg);
-  save_tree_png(csg, "tree");
-  system(("rm tree*.txt"s).c_str());
+  if (debug_draw) {
+    save_tree_png(csg, "tree");
+    system(("rm tree*.txt"s).c_str());
+  }
   return csg;
 }
