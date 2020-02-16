@@ -20,5 +20,22 @@ PYBIND11_MODULE(pycsg, m) {
 
   py::class_<CsgTree>(m, "CsgTree")
       .def(py::init<>())
-      .def("__repr__", [](const CsgTree& a) { return "<csg.CsgTree>"; });
+      .def("__repr__", [](const CsgTree& a) {
+        string result = "";
+        for (int i = 0; i < a.nodes.size(); i++) {
+          auto& node = a.nodes[i];
+          if (node.children == vec2i{-1, -1}) {
+            for (int k = 0; k < 4; k++) {
+              result += std::to_string(node.primitive.params[i]) + " ";
+            }
+          } else {
+            result += "[" + std::to_string(node.children.x) + " " +
+                      std::to_string(node.children.y) + "] ";
+            result += std::to_string(node.operation.blend) + " " +
+                      std::to_string(node.operation.softness);
+          }
+          result += "\n";
+        }
+        return result;
+      });
 }

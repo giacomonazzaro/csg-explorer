@@ -300,11 +300,12 @@ void run_app(const string& filename) {
   // scene loading
   auto ioscene = sceneio_model{};
   // load_scene(app->filename, ioscene);
-  auto camera  = sceneio_camera{};
-  auto from    = vec3f{2, 2, 2};
-  auto to      = vec3f{0.5, 0.5, 0.5};
-  camera.frame = lookat_frame(from, to, {0, 1, 0});
-  camera.focus = length(from - to);
+  auto camera   = sceneio_camera{};
+  auto from     = vec3f{2, 2, 2};
+  auto to       = vec3f{0.5, 0.5, 0.5};
+  camera.aspect = 1;
+  camera.frame  = lookat_frame(from, to, {0, 1, 0});
+  camera.focus  = length(from - to);
   ioscene.cameras.push_back(camera);
 
   app->csg = load_csg(app->filename);
@@ -338,7 +339,7 @@ void run_app(const string& filename) {
 
   // window
   auto win = opengl_window{};
-  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
+  init_glwindow(win, {720, 720}, "michelangelo", false);
 
   // callbacks
   set_draw_glcallback(
