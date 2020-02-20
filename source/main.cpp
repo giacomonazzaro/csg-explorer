@@ -57,6 +57,7 @@ struct app_state {
   trace_scene scene = {};
 
   Csg   csg        = {};
+  int   selected   = 0;
   float timer      = 0;
   bool  add_skyenv = false;
 
@@ -274,6 +275,33 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
+template <typename Type>
+bool deferred_slider(const opengl_window& win, shared_ptr<app_state> app,
+    const char* name, Type& value, float min, float max) {
+  auto copy = value;
+  if (draw_glslider(win, name, copy, min, max)) {
+    app->commands.push_back([&value, copy]() { value = copy; });
+    return 1;
+  }
+  return 0;
+}
+
+void draw_glwidgets(const opengl_window& win, shared_ptr<app_state> app,
+    const opengl_input& input) {
+  auto& node = app->csg.nodes[app->selected];
+  int   edit = 0;
+  if (node.children == vec2i{-1, -1}) {
+    edit += draw_glslider(win, "x", node.primitive.params[0], -1, 1);
+    edit += draw_glslider(win, "y", node.primitive.params[1], 0, 1);
+    edit += draw_glslider(win, "z", node.primitive.params[2], 0, 1);
+    edit += draw_glslider(win, "radius", node.primitive.params[3], 0, 1);
+  } else {
+    edit += draw_glslider(win, "blend", node.operation.blend, -1, 1);
+    edit += draw_glslider(win, "soft", node.operation.softness, 0, 1);
+  }
+  if (edit > 0) reset_display(app);
+}
+
 void run_app(const string& filename) {
   // application
   auto app      = make_shared<app_state>();
@@ -304,7 +332,7 @@ void run_app(const string& filename) {
 
   // window
   auto win = opengl_window{};
-  init_glwindow(win, {720, 720}, "yscnitraces", false);
+  init_glwindow(win, {720 + 320, 720}, "yscnitraces", true);
 
   // callbacks
   set_draw_glcallback(
@@ -322,7 +350,8 @@ void run_app(const string& filename) {
       });
   set_uiupdate_glcallback(
       win, [app](const opengl_window& win, const opengl_input& input) {
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+            !input.widgets_active) {
           auto& camera = app->scene.cameras.at(app->params.camera);
           auto  dolly  = 0.0f;
           auto  pan    = zero2f;
@@ -339,11 +368,24 @@ void run_app(const string& filename) {
         }
       });
 
+  set_widgets_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        draw_glwidgets(win, app, input);
+      });
+
   auto keycb = [app](const opengl_window& win, opengl_key key, bool pressed,
                    const opengl_input& input) {
-    if (key == opengl_key::enter && pressed) {
+    if (!pressed) return;
+    if (key == opengl_key::enter) {
       app->run([app]() { app->csg = load_csg(app->filename); });
       reset_display(app);
+    }
+
+    if (key == opengl_key::left) {
+      app->selected = yocto::max(app->selected - 1, 0);
+    }
+    if (key == opengl_key::right) {
+      app->selected = yocto::min(app->selected + 1, app->csg.nodes.size() - 1);
     }
   };
 

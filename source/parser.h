@@ -403,9 +403,9 @@ Csg load_csg(const string& filename, bool debug_draw = false) {
   }
 
   optimize_csg(csg);
-  if (debug_draw) {
+  // if (debug_draw) {
     save_tree_png(csg, "tree");
     system(("rm tree*.txt"s).c_str());
-  }
+  // }
   return csg;
 }
