@@ -1,10 +1,10 @@
 # Csg Explorer
-A small library to conviniently define ... and efficiently render them.
-Python bindings included!
+A small library to efficiently render and define implicit shapes, described as CSGs of signed distance fields using. Python bindings included!
 
 # Example
 ![](data/app.gif)
-And this is the text file that defines the shape. It can be found in `data/test.csg`.
+
+This is the text file that defines the shape in the example. It can be found in `data/test.csg`.
 ```python
 # Syntax:
 #   <node-name> = <add/remove> <softness> <primitive> <parameters...>
@@ -31,11 +31,11 @@ head -= mouth
 ```
 
 # Python binding
-
+The library parser, csg evaluator and renderer can be called directly from python with no performance losses over the C++ implementation.
 ```python
 from pycsg import *
 
-csg = load_csg("test.csg", False)
+csg = load_csg("data/test.csg")
 render(csg)
 ```
 
