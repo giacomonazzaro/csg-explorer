@@ -15,6 +15,7 @@ struct CsgPrimitve {
 };
 
 struct CsgNode {
+  string name = "";
   vec2i children = {-1, -1};
   union {
     CsgOperation operation;
@@ -113,6 +114,7 @@ inline void optimize_csg_internal(
     f.children  = {mapping[node.children.x], mapping[node.children.y]};
     f.operation = node.operation;
   }
+  f.name = node.name;
   mapping[n] = result.size();
   result.push_back(f);
 }

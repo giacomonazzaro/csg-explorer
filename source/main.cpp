@@ -181,6 +181,77 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
+// Eyelight for quick previewing.
+vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
+    rng_state& rng) {
+  auto box            = bbox3f{{0, 0, 0}, {1, 1, 1}};
+  auto intersect_bbox = [](const ray3f& ray, const bbox3f& bbox) -> float {
+    // determine intersection ranges
+    auto invd = 1.0f / ray.d;
+    auto t0   = (bbox.min - ray.o) * invd;
+    auto t1   = (bbox.max - ray.o) * invd;
+    // flip based on range directions
+    if (invd.x < 0.0f) swap(t0.x, t1.x);
+    if (invd.y < 0.0f) swap(t0.y, t1.y);
+    if (invd.z < 0.0f) swap(t0.z, t1.z);
+    auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
+    auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
+    if (tmax < tmin) return -1;
+    return tmin;
+  };
+
+  auto sdf = [&](vec3f p) -> float {
+    p -= vec3f(0.5);
+    return eval_csg(csg, p);
+  };
+
+  auto compute_normal = [&sdf](const vec3f& p) {
+    float eps = 0.001;
+    auto  o   = sdf(p);
+    auto  x   = sdf(p + vec3f{eps, 0, 0});
+    auto  y   = sdf(p + vec3f{0, eps, 0});
+    auto  z   = sdf(p + vec3f{0, 0, eps});
+    return normalize(vec3f{x, y, z} - vec3f(o));
+  };
+
+  auto material      = material_point{};
+  material.diffuse   = vec3f(0.9, 0.3, 0.2);
+  material.specular  = vec3f(0.04);
+  material.roughness = 0.2;
+
+  auto t = intersect_bbox(ray, box);
+  if (t < 0) {
+    return vec3f(0.0);
+  }
+
+  ray.o += ray.d * (t + 0.01);
+
+  for (int i = 0; i < 1000; i++) {
+    // float distance = eval_volume(volume, ray.o);
+    float distance = sdf(ray.o);
+    if (fabs(distance) <= 0.001) {
+      auto normal   = compute_normal(ray.o);
+      auto light    = normalize(vec3f{0.2, 1, 0});
+      auto clr      = vec3f{1, 1, 1};
+      auto ambient  = min((normal.y + 1) * 0.1f, 0.1f);
+      auto radiance = vec3f(0);
+      radiance += clr * eval_brdfcos(material, normal, -ray.d, light);
+      radiance += ambient * material.diffuse;
+      return radiance;
+    }
+
+    if (ray.o.x > 1) return vec3f(0.01);
+    if (ray.o.y > 1) return vec3f(0.01);
+    if (ray.o.z > 1) return vec3f(0.01);
+    if (ray.o.x < 0) return vec3f(0.01);
+    if (ray.o.y < 0) return vec3f(0.01);
+    if (ray.o.z < 0) return vec3f(0.01);
+    ray.o += ray.d * distance;
+  }
+
+  return {1, 0, 0};
+}
+
 // Trace a block of samples
 vec4f raymarch_sample(const Csg& csg, trace_state& state,
     const trace_camera& camera, const vec2i& ij, const trace_params& params) {
@@ -188,7 +259,7 @@ vec4f raymarch_sample(const Csg& csg, trace_state& state,
 
   auto ray = sample_camera(
       camera, ij, state.size(), rand2f(pixel.rng), rand2f(pixel.rng));
-  auto radiance = raymarch(camera, csg, ray, pixel.rng, params);
+  auto radiance = raymarch(camera, csg, ray, pixel.rng);
 
   if (!isfinite(radiance)) radiance = zero3f;
   if (max(radiance) > params.clamp)

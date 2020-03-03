@@ -246,7 +246,7 @@ inline string tree_to_string(const CsgTree& tree) {
       c = tree.nodes[i].children.y;
       result += std::to_string(i) + " -- " + std::to_string(c) + "\n";
 
-      sprintf(str, "%d [label=\"op\n%.1f %.1f\"]\n", i,
+      sprintf(str, "%d [label=\"%s\n%.1f %.1f\"]\n", i, tree.nodes[i].name.c_str(),
           tree.nodes[i].operation.blend, tree.nodes[i].operation.softness);
       result += std::string(str);
     }
@@ -291,7 +291,6 @@ Csg load_csg(const string& filename, bool debug_draw = false) {
   auto                       fs = open_file(filename, "rb");
   unordered_map<string, int> names;
   std::unordered_set<string> names_used;
-  int                        step = 0;
   CsgParser                  parser;
   parser.line = 1;
   for (;; parser.line += 1) {
@@ -337,7 +336,7 @@ Csg load_csg(const string& filename, bool debug_draw = false) {
       if (names.find(lhs) == names.end()) {
         if (names_used.count(lhs)) {
           parser_error(parser, "Cannot modify node \"" + lhs +
-                                   "\" because it was already used.");
+                                   "\" because it was already consumed.");
         } else {
           parser_error(parser, "Cannot find node named \"" + lhs + "\".");
         }
@@ -387,12 +386,14 @@ Csg load_csg(const string& filename, bool debug_draw = false) {
     if (assignment) {
       if (csg.nodes.empty()) csg.root = 0;
       names[lhs] = add_primitive(csg, primitive);
+      csg.nodes.back().name = lhs;
     } else {
       assert(parent != -1);
       auto backup                  = csg.nodes[parent];
       csg.nodes[parent].operation  = operation;
       csg.nodes[parent].children.x = csg.nodes.size();
       csg.nodes[parent].children.y = child;
+      csg.nodes[parent].name = backup.name;
       csg.nodes.push_back(backup);
     }
 

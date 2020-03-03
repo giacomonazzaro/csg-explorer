@@ -476,6 +476,23 @@ struct trace_intersection {
   bool  hit      = false;
 };
 
+// Material values packed into a convenience structure.
+struct material_point {
+  vec3f emission      = {0, 0, 0};
+  vec3f diffuse       = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
+  vec3f coat          = {0, 0, 0};
+  vec3f transmission  = {0, 0, 0};
+  float roughness     = 0;
+  vec3f voldensity    = {0, 0, 0};
+  vec3f volemission   = {0, 0, 0};
+  vec3f volscatter    = {0, 0, 0};
+  float volanisotropy = 0;
+  float opacity       = 1;
+  float eta           = 1;
+  bool  refract       = false;
+};
+
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
@@ -523,6 +540,9 @@ vec3f sample_microfacet(
 float sample_microfacet_pdf(float roughness, const vec3f& normal,
     const vec3f& half_vector, bool ggx = true);
 
+vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming);
+
 // Evaluate and sample volume phase function.
 vec3f sample_phasefunction(float vg, const vec2f& u);
 float eval_phasefunction(float cos_theta, float vg);
@@ -536,10 +556,6 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name);
 
 ray3f sample_camera(const trace_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv);
-
-vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
-    rng_state& rng, const trace_params& params);
-
 }  // namespace yocto
 
 #endif
