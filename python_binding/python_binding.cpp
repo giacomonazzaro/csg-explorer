@@ -9,6 +9,12 @@ float eval(const CsgTree& csg, float x, float y, float z) {
   return eval_csg(csg, {x, y, z});
 }
 
+void render(const CsgTree& csg) {
+  auto app = make_shared<app_state>();
+  app->csg = csg;
+  run_app(app);
+}
+
 string print(const CsgTree& a) {
   string result = "";
   for (int i = 0; i < a.nodes.size(); i++) {
@@ -35,7 +41,7 @@ PYBIND11_MODULE(pycsg, m) {
 
   m.def("eval", &eval);
   m.def("load_csg", &load_csg);
-  m.def("render", &run_app);
+  m.def("render", &render);
 
   py::class_<CsgTree>(m, "CsgTree").def(py::init<>()).def("__repr__", &print);
 }

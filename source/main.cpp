@@ -372,12 +372,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_state> app,
   if (edit > 0) reset_display(app);
 }
 
-void run_app(const string& filename) {
-  // application
-  auto app      = make_shared<app_state>();
-  app->csg      = load_csg(filename);
-  app->filename = filename;
-
+void run_app(shared_ptr<app_state> app) {
   // scene loading
   auto ioscene = sceneio_model{};
   // load_scene(app->filename, ioscene);
@@ -469,11 +464,14 @@ void run_app(const string& filename) {
 }
 
 int main(int argc, const char* argv[]) {
-  string filename;
   // parse command line
+  string filename;
   auto cli = make_cli("michelangelo", "Csg renderer");
   add_cli_option(cli, "scene", filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
-  run_app(filename);
+  auto app = make_shared<app_state>();
+  app->csg = load_csg(filename);
+  app->filename = filename;
+  run_app(app);
 }
