@@ -29,6 +29,9 @@ mouth += 1.0 0.05 sphere 0.1 -0.2 0.25 0.05
 head -= mouth
 
 ```
+And this is the visualization of the generated CSG, compactly stored under-the-hood to provide fast evaluation and rendering.
+
+![](data/tree.png)
 
 # Python binding
 The CSG parser, evaluator and renderer can be directly called from python, with no performance loss over the C++ implementation.
