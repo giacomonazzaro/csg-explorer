@@ -31,7 +31,7 @@ head -= mouth
 ```
 
 # Python binding
-The library parser, csg evaluator and renderer can be called directly from python with no performance losses over the C++ implementation.
+The CSG parser, evaluator and renderer can be directly called from python, with no performance loss over the C++ implementation.
 ```python
 from pycsg import *
 
