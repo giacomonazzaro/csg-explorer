@@ -243,6 +243,7 @@ const auto trace_bvh_names        = vector<string>{
 void init_state(
     trace_state& state, const trace_scene& scene, const trace_params& params);
 
+    
 // Initialize lights.
 void init_lights(trace_scene& scene);
 
@@ -318,6 +319,9 @@ struct trace_camera {
   float   focus        = flt_max;
   float   aperture     = 0;
 };
+    
+void init_state(trace_state& state, const trace_camera& camera, const trace_params& params);
+
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.

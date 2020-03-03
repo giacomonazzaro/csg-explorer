@@ -3136,6 +3136,21 @@ void init_state(
     }
   }
 }
+    
+// Init a sequence of random number generators.
+void init_state(
+                trace_state& state, const trace_camera& camera, const trace_params& params) {
+    auto image_size = camera_resolution(camera, params.resolution);
+    state    = {image_size, trace_pixel{}};
+    auto rng = make_rng(1301081);
+    for (auto j = 0; j < state.size().y; j++) {
+        for (auto i = 0; i < state.size().x; i++) {
+            state.at({i, j}).rng = make_rng(
+                                            params.seed, rand1i(rng, 1 << 31) / 2 + 1);
+        }
+    }
+}
+
 
 // Init trace lights
 void init_lights(trace_scene& scene) {
