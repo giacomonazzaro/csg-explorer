@@ -186,11 +186,9 @@ vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
     rng_state& rng) {
   auto box            = bbox3f{{0, 0, 0}, {1, 1, 1}};
   auto intersect_bbox = [](const ray3f& ray, const bbox3f& bbox) -> float {
-    // determine intersection ranges
     auto invd = 1.0f / ray.d;
     auto t0   = (bbox.min - ray.o) * invd;
     auto t1   = (bbox.max - ray.o) * invd;
-    // flip based on range directions
     if (invd.x < 0.0f) swap(t0.x, t1.x);
     if (invd.y < 0.0f) swap(t0.y, t1.y);
     if (invd.z < 0.0f) swap(t0.z, t1.z);
@@ -200,9 +198,10 @@ vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
     return tmin;
   };
 
+  auto values = vector<float>(csg.nodes.size());
   auto sdf = [&](vec3f p) -> float {
     p -= vec3f(0.5);
-    return eval_csg(csg, p);
+    return eval_csg(values, csg, p);
   };
 
   auto compute_normal = [&sdf](const vec3f& p) {
@@ -227,7 +226,6 @@ vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
   ray.o += ray.d * (t + 0.01);
 
   for (int i = 0; i < 1000; i++) {
-    // float distance = eval_volume(volume, ray.o);
     float distance = sdf(ray.o);
     if (fabs(distance) <= 0.001) {
       auto normal   = compute_normal(ray.o);
@@ -256,14 +254,15 @@ vec3f raymarch(const trace_camera& camera, const Csg& csg, ray3f ray,
 vec4f raymarch_sample(const Csg& csg, trace_state& state,
     const trace_camera& camera, const vec2i& ij, const trace_params& params) {
   auto& pixel = state.at(ij);
-
   auto ray = sample_camera(
       camera, ij, state.size(), rand2f(pixel.rng), rand2f(pixel.rng));
+  
   auto radiance = raymarch(camera, csg, ray, pixel.rng);
 
   if (!isfinite(radiance)) radiance = zero3f;
-  if (max(radiance) > params.clamp)
+  if (max(radiance) > params.clamp) {
     radiance = radiance * (params.clamp / max(radiance));
+  }
   pixel.radiance += radiance;
   pixel.hits += 1;
   pixel.samples += 1;
