@@ -3,8 +3,8 @@ A small library to conviniently define ... and efficiently render them.
 Python bindings included!
 
 # Example
-This an example screenshot from the real time renderer
-
+This an example screenshot from the real time renderer.
+![](data/screenshot.png)
 And this is the text file that defines the shape.
 ```python
 head = sphere 0.0 0.0 -0.1 0.4
@@ -34,4 +34,17 @@ from pycsg import *
 
 csg = load_csg("test.csg", False)
 render(csg)
+```
+
+# Build
+If you have Ninja installed.
+```bash
+python3 scripts/build.py release
+```
+Otherwise
+```
+mkdir build
+cd build
+cmake ..
+make
 ```
