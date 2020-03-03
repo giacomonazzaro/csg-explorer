@@ -3,9 +3,9 @@ A small library to conviniently define ... and efficiently render them.
 Python bindings included!
 
 # Example
-This an example screenshot from the real time renderer.
+This an example screenshot from the real-time renderer.
 ![](data/screenshot.png)
-And this is the text file that defines the shape.
+And this is the text file that defines the shape. It can be found in `data/test.csg`.
 ```python
 head = sphere 0.0 0.0 -0.1 0.4
 
