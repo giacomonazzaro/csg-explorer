@@ -397,7 +397,7 @@ void run_app(shared_ptr<app_state> app) {
 
   // window
   auto win = opengl_window{};
-  init_glwindow(win, {720 + 320, 720}, "yscnitraces", true);
+  init_glwindow(win, {720 + 320, 720}, "Csg Explorer", true);
 
   // callbacks
   set_draw_glcallback(
