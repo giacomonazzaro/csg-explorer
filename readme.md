@@ -3,10 +3,13 @@ A small library to conviniently define ... and efficiently render them.
 Python bindings included!
 
 # Example
-This an example screenshot from the real-time renderer.
-![](data/screenshot.png)
+![](data/app.gif)
 And this is the text file that defines the shape. It can be found in `data/test.csg`.
 ```python
+# Syntax:
+#   <node-name> = <add/remove> <softness> <primitive> <parameters...>
+#   <node-name> += <add/remove> <softness> <other-node-name>
+
 head = sphere 0.0 0.0 -0.1 0.4
 
 orbits = sphere 0.2 0.2 0.25 0.1
